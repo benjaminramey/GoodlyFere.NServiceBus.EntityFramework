@@ -6,7 +6,15 @@ properties {
 		"net35" = "$solution_name.NET35\bin\Release\$solution_name.dll"
 	}
 	$version = "1.0.0"
-	$build_version = "$version." + (git describe --tags --long).split('-')[1]
+	$git_tags = git describe --tags --long
+	if ($git_tags)
+	{
+		$build_version = "$version." + $git_tags.split('-')[1]
+	}
+	else
+	{
+		$build_version = "$version.0"
+	}
 	$run_tests = $true
   
 	$base_dir  = resolve-path ..\
