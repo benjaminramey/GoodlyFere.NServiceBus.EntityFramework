@@ -10,7 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{EB8FBB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoodlyFere.NServiceBus.EntityFramework", "GoodlyFere.NServiceBus.EntityFramework\GoodlyFere.NServiceBus.EntityFramework.csproj", "{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoodlyFere.NServiceBus.EntityFramework.Tests", "..\GoodlyFere.NServiceBus.EntityFramework.Tests\GoodlyFere.NServiceBus.EntityFramework.Tests.csproj", "{63E6885F-549B-45B6-8B9B-8838B8DF1387}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoodlyFere.NServiceBus.EntityFramework.Tests", "GoodlyFere.NServiceBus.EntityFramework.Tests\GoodlyFere.NServiceBus.EntityFramework.Tests.csproj", "{63E6885F-549B-45B6-8B9B-8838B8DF1387}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
