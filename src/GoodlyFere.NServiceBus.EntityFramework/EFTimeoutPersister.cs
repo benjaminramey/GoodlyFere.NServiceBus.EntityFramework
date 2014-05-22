@@ -32,6 +32,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GoodlyFere.Data;
 using GoodlyFere.NServiceBus.EntityFramework.Criteria;
 using GoodlyFere.NServiceBus.EntityFramework.Model;
 using NServiceBus;

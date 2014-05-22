@@ -36,6 +36,7 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
 using GoodlyFere.Criteria;
+using GoodlyFere.Data;
 using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion

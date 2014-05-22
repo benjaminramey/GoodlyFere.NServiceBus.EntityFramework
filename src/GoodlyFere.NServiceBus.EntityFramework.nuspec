@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>GoodlyFere.NServiceBus.EntityFramework</id>
+    <version>$version$</version>
+    <title>GoodlyFere.NServiceBus.EntityFramework</title>
+    <authors>Ben Ramey</authors>
+    <owners>Ben Ramey</owners>
+    <licenseUrl>https://github.com/benjaminramey/GoodlyFere.NServiceBus.EntityFramework/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/benjaminramey/GoodlyFere.NServiceBus.EntityFramework</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>EntityFramework persisters for NServiceBus.</description>
+    <releaseNotes>Initial release.</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>nservicebus entityframework persisters</tags>
+  </metadata>
+</package>

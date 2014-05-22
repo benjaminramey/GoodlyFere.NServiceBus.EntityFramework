@@ -44,6 +44,9 @@
     <Reference Include="GoodlyFere.Criteria">
       <HintPath>..\packages\GoodlyFere.Criteria.1.0.0.6\lib\net45\GoodlyFere.Criteria.dll</HintPath>
     </Reference>
+    <Reference Include="GoodlyFere.Data">
+      <HintPath>..\packages\GoodlyFere.Data.1.0.0.0\lib\net40\GoodlyFere.Data.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common">
       <HintPath>..\packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
     </Reference>
@@ -68,7 +71,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BaseDataContext.cs" />
     <Compile Include="Criteria\BelongsToSaga.cs" />
     <Compile Include="Criteria\SagaCriteria.cs" />
     <Compile Include="EFDataContext.cs" />
@@ -79,9 +81,7 @@
     <Compile Include="Criteria\FutureTimeout.cs" />
     <Compile Include="Criteria\HasMessageType.cs" />
     <Compile Include="Criteria\HasSubscriberEndpoint.cs" />
-    <Compile Include="IDataContext.cs" />
     <Compile Include="Criteria\NextChunkTimeout.cs" />
-    <Compile Include="IRepository.cs" />
     <Compile Include="LogExtensions.cs" />
     <Compile Include="Model\ValidationExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

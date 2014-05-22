@@ -2,8 +2,7 @@ properties {
 	$solution_name = "GoodlyFere.NServiceBus.EntityFramework"
 	$nuspec_file_name = "$solution_name.nuspec"
 	$package_dlls = @{
-		"net45" = "$solution_name\bin\Release\$solution_name.dll"
-		"net35" = "$solution_name.NET35\bin\Release\$solution_name.dll"
+		"net40" = "$solution_name\bin\Release\$solution_name.dll"
 	}
 	$version = "1.0.0"
 	$git_tags = git describe --tags --long
