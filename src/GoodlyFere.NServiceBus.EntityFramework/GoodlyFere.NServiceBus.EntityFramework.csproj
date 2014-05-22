@@ -38,7 +38,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseDataContext.cs" />
+    <Compile Include="BelongsToSaga.cs" />
+    <Compile Include="EFDataContext.cs" />
+    <Compile Include="EFDbContext.cs" />
+    <Compile Include="EFSagaPersister.cs" />
+    <Compile Include="EFTimeoutPersister.cs" />
+    <Compile Include="FutureTimeout.cs" />
+    <Compile Include="HasMessageType.cs" />
+    <Compile Include="HasSubscriberEndpoint.cs" />
+    <Compile Include="IDataContext.cs" />
+    <Compile Include="NextChunkTimeout.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SagaData.cs" />
+    <Compile Include="Subscription.cs" />
+    <Compile Include="TimeoutDataEntity.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
