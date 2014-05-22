@@ -30,109 +30,115 @@
 #region Usings
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
 
 #endregion
 
-public abstract class BaseDataContext : IDataContext
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Public Methods
-
-    public virtual void Create<T>(T newObject)
+    public abstract class BaseDataContext : IDataContext
     {
-        using (var repo = GetRepository<T>())
+        #region Public Methods
+
+        public virtual void Create<T>(T newObject)
         {
-            repo.Add(newObject);
+            using (var repo = GetRepository<T>())
+            {
+                repo.Add(newObject);
+            }
         }
-    }
 
-    public void Delete<T>(T objectToDelete)
-    {
-        using (var repo = GetRepository<T>())
+        public void Delete<T>(T objectToDelete)
         {
-            repo.Remove(objectToDelete);
+            using (var repo = GetRepository<T>())
+            {
+                repo.Remove(objectToDelete);
+            }
         }
-    }
 
-    public abstract void Dispose();
+        public abstract void Dispose();
 
-    public virtual IList<T> Find<T>(ICriteria<T> criteria)
-    {
-        using (var repo = GetRepository<T>())
+        public virtual IList<T> Find<T>(ICriteria<T> criteria)
         {
-            return repo.Find(criteria);
+            using (var repo = GetRepository<T>())
+            {
+                return repo.Find(criteria);
+            }
         }
-    }
 
-    public T FindById<T>(object id)
-    {
-        using (var repo = GetRepository<T>())
+        public T FindById<T>(object id)
         {
-            return repo.FindById(id);
+            using (var repo = GetRepository<T>())
+            {
+                return repo.FindById(id);
+            }
         }
-    }
 
-    public virtual T FindOne<T>(ICriteria<T> criteria)
-    {
-        using (var repo = GetRepository<T>())
+        public virtual T FindOne<T>(ICriteria<T> criteria)
         {
-            return repo.FindOne(criteria);
+            using (var repo = GetRepository<T>())
+            {
+                return repo.FindOne(criteria);
+            }
         }
-    }
 
-    public T FindOne<T, TSortKey>(ICriteria<T> criteria, Expression<Func<T, TSortKey>> ordering, bool desc = false)
-    {
-        using (var repo = GetRepository<T>())
+        public T FindOne<T, TSortKey>(ICriteria<T> criteria, Expression<Func<T, TSortKey>> ordering, bool desc = false)
         {
-            return repo.FindOne(criteria, ordering, desc);
+            using (var repo = GetRepository<T>())
+            {
+                return repo.FindOne(criteria, ordering, desc);
+            }
         }
-    }
 
-    public virtual IList<T> GetAll<T>()
-    {
-        using (var repo = GetRepository<T>())
+        public virtual IList<T> GetAll<T>()
         {
-            return repo.GetAll();
+            using (var repo = GetRepository<T>())
+            {
+                return repo.GetAll();
+            }
         }
-    }
 
-    public virtual T GetOne<T>()
-    {
-        using (var repo = GetRepository<T>())
+        public virtual T GetOne<T>()
         {
-            return repo.FindOne();
+            using (var repo = GetRepository<T>())
+            {
+                return repo.FindOne();
+            }
         }
-    }
 
-    public void LoadChildren<T>(T obj, string propertyName)
-    {
-        using (var repo = GetRepository<T>())
+        public void LoadChildren<T>(T obj, string propertyName)
         {
-            repo.LoadChildren(obj, propertyName);
+            using (var repo = GetRepository<T>())
+            {
+                repo.LoadChildren(obj, propertyName);
+            }
         }
-    }
 
-    public void LoadParent<T>(T obj, string propertyName)
-    {
-        using (var repo = GetRepository<T>())
+        public void LoadParent<T>(T obj, string propertyName)
         {
-            repo.LoadParent(obj, propertyName);
+            using (var repo = GetRepository<T>())
+            {
+                repo.LoadParent(obj, propertyName);
+            }
         }
-    }
 
-    public virtual void Update<T>(T newObject)
-    {
-        using (var repo = GetRepository<T>())
+        public virtual void Update<T>(T newObject)
         {
-            repo.Update(newObject);
+            using (var repo = GetRepository<T>())
+            {
+                repo.Update(newObject);
+            }
         }
+
+        #endregion
+
+        #region Methods
+
+        protected abstract IRepository<T> GetRepository<T>();
+
+        #endregion
     }
-
-    #endregion
-
-    #region Methods
-
-    protected abstract IRepository<T> GetRepository<T>();
-
-    #endregion
 }

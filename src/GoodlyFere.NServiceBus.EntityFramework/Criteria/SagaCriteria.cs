@@ -1,7 +1,7 @@
-#region License
+﻿#region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="EFDataContext.cs">
+//  <copyright file="SagaCriteria.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,46 +31,57 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using GoodlyFere.Criteria;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    public class EFDataContext : BaseDataContext
+    public class SagaCriteria<T> : BinaryCriteria<T>
     {
         #region Constants and Fields
 
-        private readonly EFDbContext _dbContext;
+        private readonly string _property;
+        private readonly object _value;
 
         #endregion
 
         #region Constructors and Destructors
 
-        public EFDataContext()
+        public SagaCriteria(string property, object value)
         {
-            _dbContext = new EFDbContext();
+            _property = property;
+            _value = value;
         }
 
         #endregion
 
-        #region Public Methods
+        #region Public Properties
 
-        public override void Dispose()
+        public override Expression<Func<T, bool>> Satisfier
         {
-            if (_dbContext != null)
+            get
             {
-                _dbContext.Dispose();
+                PropertyInfo propertyInfo = typeof(T).GetProperty(_property);
+                Type propertyType = propertyInfo.PropertyType;
+
+                ParameterExpression pe = Expression.Parameter(typeof(T), "data");
+                MemberExpression me = Expression.MakeMemberAccess(pe, propertyInfo);
+
+                if (propertyType.IsGenericType
+                    && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                {
+                    PropertyInfo valuePropInfo = propertyType.GetProperty("Value");
+                    me = Expression.MakeMemberAccess(me, valuePropInfo);
+                }
+
+                ConstantExpression ce = Expression.Constant(_value);
+                BinaryExpression be = Expression.Equal(me, ce);
+
+                return Expression.Lambda<Func<T, bool>>(be, new[] { pe });
             }
-        }
-
-        #endregion
-
-        #region Methods
-
-        protected override IRepository<T> GetRepository<T>()
-        {
-            Type repoType = typeof(EFRepository<>).MakeGenericType(typeof(T));
-            return (IRepository<T>)Activator.CreateInstance(repoType, _dbContext);
         }
 
         #endregion

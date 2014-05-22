@@ -30,26 +30,31 @@
 #region Usings
 
 using System;
+using System.Data.Entity;
 using System.Linq;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class EFDbContext : DbContext
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Constructors and Destructors
-
-    public EFDbContext()
+    public class EFDbContext : DbContext
     {
-        Configuration.LazyLoadingEnabled = true;
+        #region Constructors and Destructors
+
+        public EFDbContext()
+        {
+            Configuration.LazyLoadingEnabled = true;
+        }
+
+        #endregion
+
+        #region Public Properties
+
+        public DbSet<SagaData> Sagas { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
+
+        #endregion
     }
-
-    #endregion
-
-    #region Public Properties
-
-    public DbSet<SagaData> Sagas { get; set; }
-    public DbSet<Subscription> Subscriptions { get; set; }
-    public DbSet<TimeoutDataEntity> Timeouts { get; set; }
-
-    #endregion
 }

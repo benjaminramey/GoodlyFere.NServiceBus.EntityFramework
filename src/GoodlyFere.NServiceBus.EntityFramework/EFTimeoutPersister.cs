@@ -30,109 +30,118 @@
 #region Usings
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using GoodlyFere.NServiceBus.EntityFramework.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
+using NServiceBus;
+using NServiceBus.Timeout.Core;
+using Newtonsoft.Json;
 
 #endregion
 
-public class EFTimeoutPersister : IPersistTimeouts
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Constants and Fields
-
-    private readonly IDataContext _dataContext;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public EFTimeoutPersister(IDataContext dataContext)
+    public class EFTimeoutPersister : IPersistTimeouts
     {
-        _dataContext = dataContext;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly IDataContext _dataContext;
 
-    #region Public Methods
+        #endregion
 
-    public void Add(TimeoutData timeout)
-    {
-        if (string.IsNullOrWhiteSpace(timeout.Id))
+        #region Constructors and Destructors
+
+        public EFTimeoutPersister(IDataContext dataContext)
         {
-            timeout.Id = Guid.NewGuid().ToString();
+            _dataContext = dataContext;
         }
 
-        TimeoutDataEntity timeoutEntity = new TimeoutDataEntity
+        #endregion
+
+        #region Public Methods
+
+        public void Add(TimeoutData timeout)
+        {
+            if (string.IsNullOrWhiteSpace(timeout.Id))
             {
-                CorrelationId = timeout.CorrelationId,
-                Destination = timeout.Destination.ToString(),
-                Headers = JsonConvert.SerializeObject(timeout.Headers),
-                Id = timeout.Id,
-                OwningTimeoutManager = timeout.OwningTimeoutManager,
-                SagaId = timeout.SagaId,
-                State = timeout.State,
-                Time = timeout.Time
-            };
+                timeout.Id = Guid.NewGuid().ToString();
+            }
 
-        _dataContext.Create(timeoutEntity);
-    }
+            TimeoutDataEntity timeoutEntity = new TimeoutDataEntity
+                {
+                    CorrelationId = timeout.CorrelationId,
+                    Destination = timeout.Destination.ToString(),
+                    Headers = JsonConvert.SerializeObject(timeout.Headers),
+                    Id = timeout.Id,
+                    OwningTimeoutManager = timeout.OwningTimeoutManager,
+                    SagaId = timeout.SagaId,
+                    State = timeout.State,
+                    Time = timeout.Time
+                };
 
-    public List<Tuple<string, DateTime>> GetNextChunk(DateTime startSlice, out DateTime nextTimeToRunQuery)
-    {
-        DateTime now = DateTime.UtcNow;
-        IList<TimeoutDataEntity> matchingTimeouts =
-            _dataContext.Find(new NextChunkTimeout(startSlice, now, Configure.EndpointName));
-
-        TimeoutDataEntity nextTimeout = _dataContext.FindOne(
-            new FutureTimeout(now, Configure.EndpointName), t => t.Time);
-        nextTimeToRunQuery = nextTimeout == null ? now.AddMinutes(10) : nextTimeout.Time;
-
-        return matchingTimeouts
-            .Select(t => new Tuple<string, DateTime>(t.Id, t.Time))
-            .ToList();
-    }
-
-    public void RemoveTimeoutBy(Guid sagaId)
-    {
-        TimeoutDataEntity[] entitiesToDeletes = _dataContext.Find(new BelongsToSaga(sagaId)).ToArray();
-
-        foreach (var entity in entitiesToDeletes)
-        {
-            _dataContext.Delete(entity);
-        }
-    }
-
-    public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
-    {
-        var entity = _dataContext.FindById<TimeoutDataEntity>(timeoutId);
-
-        if (entity == null)
-        {
-            timeoutData = null;
-            return false;
+            _dataContext.Create(timeoutEntity);
         }
 
-        timeoutData = new TimeoutData
+        public List<Tuple<string, DateTime>> GetNextChunk(DateTime startSlice, out DateTime nextTimeToRunQuery)
+        {
+            DateTime now = DateTime.UtcNow;
+            IList<TimeoutDataEntity> matchingTimeouts =
+                _dataContext.Find(new NextChunkTimeout(startSlice, now, Configure.EndpointName));
+
+            TimeoutDataEntity nextTimeout = _dataContext.FindOne(
+                new FutureTimeout(now, Configure.EndpointName), t => t.Time);
+            nextTimeToRunQuery = nextTimeout == null ? now.AddMinutes(10) : nextTimeout.Time;
+
+            return matchingTimeouts
+                .Select(t => new Tuple<string, DateTime>(t.Id, t.Time))
+                .ToList();
+        }
+
+        public void RemoveTimeoutBy(Guid sagaId)
+        {
+            TimeoutDataEntity[] entitiesToDeletes = _dataContext.Find(new BelongsToSaga(sagaId)).ToArray();
+
+            foreach (var entity in entitiesToDeletes)
             {
-                CorrelationId = entity.CorrelationId,
-                Destination = Address.Parse(entity.Destination),
-                Headers = JsonConvert.DeserializeObject<Dictionary<string, string>>(entity.Headers),
-                Id = entity.Id,
-                OwningTimeoutManager = entity.OwningTimeoutManager,
-                SagaId = entity.SagaId,
-                State = entity.State,
-                Time = entity.Time
-            };
+                _dataContext.Delete(entity);
+            }
+        }
 
-        try
+        public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
         {
-            _dataContext.Delete(entity);
-            return true;
+            var entity = _dataContext.FindById<TimeoutDataEntity>(timeoutId);
+
+            if (entity == null)
+            {
+                timeoutData = null;
+                return false;
+            }
+
+            timeoutData = new TimeoutData
+                {
+                    CorrelationId = entity.CorrelationId,
+                    Destination = Address.Parse(entity.Destination),
+                    Headers = JsonConvert.DeserializeObject<Dictionary<string, string>>(entity.Headers),
+                    Id = entity.Id,
+                    OwningTimeoutManager = entity.OwningTimeoutManager,
+                    SagaId = entity.SagaId,
+                    State = entity.State,
+                    Time = entity.Time
+                };
+
+            try
+            {
+                _dataContext.Delete(entity);
+                return true;
+            }
+            catch (Exception)
+            {
+                timeoutData = null;
+                return false;
+            }
         }
-        catch (Exception)
-        {
-            timeoutData = null;
-            return false;
-        }
+
+        #endregion
     }
-
-    #endregion
 }

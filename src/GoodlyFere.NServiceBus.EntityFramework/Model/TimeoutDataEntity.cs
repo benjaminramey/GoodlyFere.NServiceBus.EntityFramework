@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="FutureTimeout.cs">
+//  <copyright file="TimeoutDataEntity.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -34,35 +34,21 @@ using System.Linq;
 
 #endregion
 
-public class FutureTimeout : BinaryCriteria<TimeoutDataEntity>
+namespace GoodlyFere.NServiceBus.EntityFramework.Model
 {
-    #region Constants and Fields
-
-    private readonly string _endpoint;
-    private readonly DateTime _now;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public FutureTimeout(DateTime now, string endpoint)
+    public class TimeoutDataEntity
     {
-        _now = now;
-        _endpoint = endpoint;
+        #region Public Properties
+
+        public string CorrelationId { get; set; }
+        public string Destination { get; set; }
+        public string Headers { get; set; }
+        public string Id { get; set; }
+        public string OwningTimeoutManager { get; set; }
+        public Guid SagaId { get; set; }
+        public byte[] State { get; set; }
+        public DateTime Time { get; set; }
+
+        #endregion
     }
-
-    #endregion
-
-    #region Public Properties
-
-    public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
-    {
-        get
-        {
-            return t => t.OwningTimeoutManager == _endpoint
-                        && t.Time > _now;
-        }
-    }
-
-    #endregion
 }

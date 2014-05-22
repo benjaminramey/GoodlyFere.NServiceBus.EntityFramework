@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="Subscription.cs">
+//  <copyright file="SagaData.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,18 +31,21 @@
 
 using System;
 using System.Linq;
+using NServiceBus.Saga;
 
 #endregion
 
-public class Subscription
+namespace GoodlyFere.NServiceBus.EntityFramework.Model
 {
-    #region Public Properties
+    public class SagaData : IContainSagaData
+    {
+        #region Public Properties
 
-    public int Id { get; set; }
-    public string MessageType { get; set; }
-    public string SubscriberEndpoint { get; set; }
-    public string TypeName { get; set; }
-    public string Version { get; set; }
+        public Guid Id { get; set; }
+        public bool IsCompleted { get; set; }
+        public string OriginalMessageId { get; set; }
+        public string Originator { get; set; }
 
-    #endregion
+        #endregion
+    }
 }

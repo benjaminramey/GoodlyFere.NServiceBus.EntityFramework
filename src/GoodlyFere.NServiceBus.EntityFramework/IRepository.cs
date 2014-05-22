@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="SagaData.cs">
+//  <copyright file="IRepository.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -30,17 +30,41 @@
 #region Usings
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
 
 #endregion
 
-public class SagaData : IContainSagaData
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Public Properties
+    public interface IRepository<T> : IDisposable
+    {
+        #region Public Methods
 
-    public Guid Id { get; set; }
-    public string OriginalMessageId { get; set; }
-    public string Originator { get; set; }
+        void Add(T newObject);
 
-    #endregion
+        IList<T> Find(ICriteria<T> criteria);
+
+        T FindById(object id);
+
+        T FindOne(ICriteria<T> criteria);
+
+        T FindOne();
+
+        T FindOne<TSortKey>(ICriteria<T> criteria, Expression<Func<T, TSortKey>> ordering, bool desc = false);
+
+        IList<T> GetAll();
+
+        void LoadChildren(T obj, string propertyName);
+
+        void LoadParent(T obj, string propertyName);
+
+        void Remove(T objectToDelete);
+
+        void Update(T objectToUpdate);
+
+        #endregion
+    }
 }

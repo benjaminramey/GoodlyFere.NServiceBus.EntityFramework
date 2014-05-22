@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="NextChunkTimeout.cs">
+//  <copyright file="HasSubscriberEndpoint.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,41 +31,41 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class NextChunkTimeout : BinaryCriteria<TimeoutDataEntity>
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    #region Constants and Fields
-
-    private readonly string _endpoint;
-    private readonly DateTime _now;
-    private readonly DateTime _startSlice;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public NextChunkTimeout(DateTime startSlice, DateTime now, string endpoint)
+    public class HasSubscriberEndpoint : BinaryCriteria<Subscription>
     {
-        _now = now;
-        _startSlice = startSlice;
-        _endpoint = endpoint;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly string _subscriberEndpoint;
 
-    #region Public Properties
+        #endregion
 
-    public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
-    {
-        get
+        #region Constructors and Destructors
+
+        public HasSubscriberEndpoint(string subscriberEndpoint)
         {
-            return t => t.OwningTimeoutManager == _endpoint
-                        && t.Time > _startSlice
-                        && t.Time <= _now;
+            _subscriberEndpoint = subscriberEndpoint;
         }
-    }
 
-    #endregion
+        #endregion
+
+        #region Public Properties
+
+        public override Expression<Func<Subscription, bool>> Satisfier
+        {
+            get
+            {
+                return s => s.SubscriberEndpoint == _subscriberEndpoint;
+            }
+        }
+
+        #endregion
+    }
 }

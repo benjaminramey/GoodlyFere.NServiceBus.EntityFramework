@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="BelongsToSaga.cs">
+//  <copyright file="FutureTimeout.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,35 +31,44 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class BelongsToSaga : BinaryCriteria<TimeoutDataEntity>
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    #region Constants and Fields
-
-    private readonly Guid _sagaId;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public BelongsToSaga(Guid sagaId)
+    public class FutureTimeout : BinaryCriteria<TimeoutDataEntity>
     {
-        _sagaId = sagaId;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly string _endpoint;
+        private readonly DateTime _now;
 
-    #region Public Properties
+        #endregion
 
-    public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
-    {
-        get
+        #region Constructors and Destructors
+
+        public FutureTimeout(DateTime now, string endpoint)
         {
-            return e => e.SagaId == _sagaId;
+            _now = now;
+            _endpoint = endpoint;
         }
-    }
 
-    #endregion
+        #endregion
+
+        #region Public Properties
+
+        public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
+        {
+            get
+            {
+                return t => t.OwningTimeoutManager == _endpoint
+                            && t.Time > _now;
+            }
+        }
+
+        #endregion
+    }
 }

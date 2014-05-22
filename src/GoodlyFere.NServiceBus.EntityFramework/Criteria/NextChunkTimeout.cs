@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="HasSubscriberEndpoint.cs">
+//  <copyright file="NextChunkTimeout.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,35 +31,47 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class HasSubscriberEndpoint : BinaryCriteria<Subscription>
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    #region Constants and Fields
-
-    private readonly string _subscriberEndpoint;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public HasSubscriberEndpoint(string subscriberEndpoint)
+    public class NextChunkTimeout : BinaryCriteria<TimeoutDataEntity>
     {
-        _subscriberEndpoint = subscriberEndpoint;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly string _endpoint;
+        private readonly DateTime _now;
+        private readonly DateTime _startSlice;
 
-    #region Public Properties
+        #endregion
 
-    public override Expression<Func<Subscription, bool>> Satisfier
-    {
-        get
+        #region Constructors and Destructors
+
+        public NextChunkTimeout(DateTime startSlice, DateTime now, string endpoint)
         {
-            return s => s.SubscriberEndpoint == _subscriberEndpoint;
+            _now = now;
+            _startSlice = startSlice;
+            _endpoint = endpoint;
         }
-    }
 
-    #endregion
+        #endregion
+
+        #region Public Properties
+
+        public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
+        {
+            get
+            {
+                return t => t.OwningTimeoutManager == _endpoint
+                            && t.Time > _startSlice
+                            && t.Time <= _now;
+            }
+        }
+
+        #endregion
+    }
 }

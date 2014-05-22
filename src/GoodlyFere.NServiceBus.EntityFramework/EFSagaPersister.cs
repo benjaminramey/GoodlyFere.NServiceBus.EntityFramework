@@ -31,63 +31,69 @@
 
 using System;
 using System.Linq;
+using GoodlyFere.NServiceBus.EntityFramework.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
+using NServiceBus.Saga;
 
 #endregion
 
-public class EFSagaPersister : IPersistSagas
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Constants and Fields
-
-    private readonly IDataContext _dataContext;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public EFSagaPersister(IDataContext dataContext)
+    public class EFSagaPersister : IPersistSagas
     {
-        _dataContext = dataContext;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly IDataContext _dataContext;
 
-    #region Public Methods
+        #endregion
 
-    public void Complete(IContainSagaData saga)
-    {
-        var concreteSagaData = saga as SagaData;
-        concreteSagaData.IsCompleted = true;
+        #region Constructors and Destructors
 
-        _dataContext.Update(concreteSagaData);
-    }
-
-    public T Get<T>(Guid sagaId) where T : IContainSagaData
-    {
-        return _dataContext.FindById<T>(sagaId);
-    }
-
-    public T Get<T>(string property, object value) where T : IContainSagaData
-    {
-        return _dataContext.FindOne(new SagaCriteria<T>(property, value));
-    }
-
-    public void Save(IContainSagaData saga)
-    {
-        var concreteSagaData = saga as SagaData;
-
-        if (saga.Id == Guid.Empty)
+        public EFSagaPersister(IDataContext dataContext)
         {
-            saga.Id = Guid.NewGuid();
+            _dataContext = dataContext;
         }
 
-        _dataContext.Create(concreteSagaData);
-    }
+        #endregion
 
-    public void Update(IContainSagaData saga)
-    {
-        var concreteSagaData = saga as SagaData;
-        _dataContext.Update(concreteSagaData);
-    }
+        #region Public Methods
 
-    #endregion
+        public void Complete(IContainSagaData saga)
+        {
+            var concreteSagaData = saga as SagaData;
+            concreteSagaData.IsCompleted = true;
+
+            _dataContext.Update(concreteSagaData);
+        }
+
+        public T Get<T>(Guid sagaId) where T : IContainSagaData
+        {
+            return _dataContext.FindById<T>(sagaId);
+        }
+
+        public T Get<T>(string property, object value) where T : IContainSagaData
+        {
+            return _dataContext.FindOne(new SagaCriteria<T>(property, value));
+        }
+
+        public void Save(IContainSagaData saga)
+        {
+            var concreteSagaData = saga as SagaData;
+
+            if (saga.Id == Guid.Empty)
+            {
+                saga.Id = Guid.NewGuid();
+            }
+
+            _dataContext.Create(concreteSagaData);
+        }
+
+        public void Update(IContainSagaData saga)
+        {
+            var concreteSagaData = saga as SagaData;
+            _dataContext.Update(concreteSagaData);
+        }
+
+        #endregion
+    }
 }

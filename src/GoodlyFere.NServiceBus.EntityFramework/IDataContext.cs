@@ -30,35 +30,41 @@
 #region Usings
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
 
 #endregion
 
-public interface IDataContext : IDisposable
+namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    #region Public Methods
+    public interface IDataContext : IDisposable
+    {
+        #region Public Methods
 
-    void Create<T>(T newObject);
+        void Create<T>(T newObject);
 
-    void Delete<T>(T objectToDelete);
+        void Delete<T>(T objectToDelete);
 
-    IList<T> Find<T>(ICriteria<T> criteria);
+        IList<T> Find<T>(ICriteria<T> criteria);
 
-    T FindById<T>(object id);
+        T FindById<T>(object id);
 
-    T FindOne<T>(ICriteria<T> criteria);
+        T FindOne<T>(ICriteria<T> criteria);
 
-    T FindOne<T, TSortKey>(ICriteria<T> criteria, Expression<Func<T, TSortKey>> ordering, bool desc = false);
+        T FindOne<T, TSortKey>(ICriteria<T> criteria, Expression<Func<T, TSortKey>> ordering, bool desc = false);
 
-    IList<T> GetAll<T>();
+        IList<T> GetAll<T>();
 
-    T GetOne<T>();
+        T GetOne<T>();
 
-    void LoadChildren<T>(T obj, string propertyName);
+        void LoadChildren<T>(T obj, string propertyName);
 
-    void LoadParent<T>(T obj, string propertyName);
+        void LoadParent<T>(T obj, string propertyName);
 
-    void Update<T>(T newObject);
+        void Update<T>(T newObject);
 
-    #endregion
+        #endregion
+    }
 }

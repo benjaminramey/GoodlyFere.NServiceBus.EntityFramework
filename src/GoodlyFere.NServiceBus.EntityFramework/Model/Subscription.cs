@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="EFDataContext.cs">
+//  <copyright file="Subscription.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -34,44 +34,17 @@ using System.Linq;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework
+namespace GoodlyFere.NServiceBus.EntityFramework.Model
 {
-    public class EFDataContext : BaseDataContext
+    public class Subscription
     {
-        #region Constants and Fields
+        #region Public Properties
 
-        private readonly EFDbContext _dbContext;
-
-        #endregion
-
-        #region Constructors and Destructors
-
-        public EFDataContext()
-        {
-            _dbContext = new EFDbContext();
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        public override void Dispose()
-        {
-            if (_dbContext != null)
-            {
-                _dbContext.Dispose();
-            }
-        }
-
-        #endregion
-
-        #region Methods
-
-        protected override IRepository<T> GetRepository<T>()
-        {
-            Type repoType = typeof(EFRepository<>).MakeGenericType(typeof(T));
-            return (IRepository<T>)Activator.CreateInstance(repoType, _dbContext);
-        }
+        public int Id { get; set; }
+        public string MessageType { get; set; }
+        public string SubscriberEndpoint { get; set; }
+        public string TypeName { get; set; }
+        public string Version { get; set; }
 
         #endregion
     }

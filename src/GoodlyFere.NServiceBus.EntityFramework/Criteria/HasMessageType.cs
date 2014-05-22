@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="TimeoutDataEntity.cs">
+//  <copyright file="HasMessageType.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,21 +31,41 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class TimeoutDataEntity
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    #region Public Properties
+    public class HasMessageType : BinaryCriteria<Subscription>
+    {
+        #region Constants and Fields
 
-    public string CorrelationId { get; set; }
-    public string Destination { get; set; }
-    public string Headers { get; set; }
-    public string Id { get; set; }
-    public string OwningTimeoutManager { get; set; }
-    public Guid SagaId { get; set; }
-    public byte[] State { get; set; }
-    public DateTime Time { get; set; }
+        private readonly string _messageType;
 
-    #endregion
+        #endregion
+
+        #region Constructors and Destructors
+
+        public HasMessageType(string messageType)
+        {
+            _messageType = messageType;
+        }
+
+        #endregion
+
+        #region Public Properties
+
+        public override Expression<Func<Subscription, bool>> Satisfier
+        {
+            get
+            {
+                return s => s.MessageType == _messageType;
+            }
+        }
+
+        #endregion
+    }
 }

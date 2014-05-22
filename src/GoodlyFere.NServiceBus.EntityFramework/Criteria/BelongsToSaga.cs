@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="HasMessageType.cs">
+//  <copyright file="BelongsToSaga.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,35 +31,41 @@
 
 using System;
 using System.Linq;
+using System.Linq.Expressions;
+using GoodlyFere.Criteria;
+using GoodlyFere.NServiceBus.EntityFramework.Model;
 
 #endregion
 
-public class HasMessageType : BinaryCriteria<Subscription>
+namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
 {
-    #region Constants and Fields
-
-    private readonly string _messageType;
-
-    #endregion
-
-    #region Constructors and Destructors
-
-    public HasMessageType(string messageType)
+    public class BelongsToSaga : BinaryCriteria<TimeoutDataEntity>
     {
-        _messageType = messageType;
-    }
+        #region Constants and Fields
 
-    #endregion
+        private readonly Guid _sagaId;
 
-    #region Public Properties
+        #endregion
 
-    public override Expression<Func<Subscription, bool>> Satisfier
-    {
-        get
+        #region Constructors and Destructors
+
+        public BelongsToSaga(Guid sagaId)
         {
-            return s => s.MessageType == _messageType;
+            _sagaId = sagaId;
         }
-    }
 
-    #endregion
+        #endregion
+
+        #region Public Properties
+
+        public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
+        {
+            get
+            {
+                return e => e.SagaId == _sagaId;
+            }
+        }
+
+        #endregion
+    }
 }
