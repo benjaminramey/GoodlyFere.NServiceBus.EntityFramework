@@ -41,9 +41,9 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 
 [assembly: AssemblyTitle("GoodlyFere.NServiceBus.EntityFramework")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("EntityFramework persisters for NServicesBus.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Ben Ramey")]
 [assembly: AssemblyProduct("GoodlyFere.NServiceBus.EntityFramework")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
