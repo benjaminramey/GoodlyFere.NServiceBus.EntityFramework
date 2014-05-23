@@ -10,8 +10,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{EB8FBB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoodlyFere.NServiceBus.EntityFramework", "GoodlyFere.NServiceBus.EntityFramework\GoodlyFere.NServiceBus.EntityFramework.csproj", "{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoodlyFere.NServiceBus.EntityFramework.Tests", "GoodlyFere.NServiceBus.EntityFramework.Tests\GoodlyFere.NServiceBus.EntityFramework.Tests.csproj", "{63E6885F-549B-45B6-8B9B-8838B8DF1387}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{16ECB83F-D533-4BBB-8A7C-9FFC0981DBEB}"
 	ProjectSection(SolutionItems) = preProject
 		GoodlyFere.NServiceBus.EntityFramework.nuspec = GoodlyFere.NServiceBus.EntityFramework.nuspec
@@ -29,10 +27,6 @@ Global
 		{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}.Release|Any CPU.Build.0 = Release|Any CPU
-		{63E6885F-549B-45B6-8B9B-8838B8DF1387}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63E6885F-549B-45B6-8B9B-8838B8DF1387}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63E6885F-549B-45B6-8B9B-8838B8DF1387}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63E6885F-549B-45B6-8B9B-8838B8DF1387}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
