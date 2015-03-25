@@ -1,4 +1,5 @@
-GF.NServiceBus.EntityFramework
-==============================
+# NServiceBus EntityFramework Persistence
+This is a plugin for NServiceBus to use EntityFramework for your persistence layer.
 
-EntityFramework persisters for NServiceBus
+## Version History
+- 1.0.0.0: Initial release

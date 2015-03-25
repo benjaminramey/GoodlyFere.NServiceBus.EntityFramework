@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="FutureTimeout.cs">
+//  <copyright file="TimeoutDataEntity.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,44 +31,47 @@
 
 using System;
 using System.Linq;
-using System.Linq.Expressions;
-using GoodlyFere.Criteria;
-using GoodlyFere.NServiceBus.EntityFramework.Model;
+using NServiceBus;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
+namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 {
-    public class FutureTimeout : BinaryCriteria<TimeoutDataEntity>
+    public class TimeoutDataEntity
     {
-        #region Constants and Fields
+        /// <summary>
+        ///     Id of this timeout.
+        /// </summary>
+        public Guid Id { get; set; }
 
-        private readonly string _endpoint;
-        private readonly DateTime _now;
+        /// <summary>
+        ///     The address of the client who requested the timeout.
+        /// </summary>
+        public string Destination { get; set; }
 
-        #endregion
+        /// <summary>
+        ///     The saga ID.
+        /// </summary>
+        public Guid SagaId { get; set; }
 
-        #region Constructors and Destructors
+        /// <summary>
+        ///     Additional state.
+        /// </summary>
+        public byte[] State { get; set; }
 
-        public FutureTimeout(DateTime now, string endpoint)
-        {
-            _now = now;
-            _endpoint = endpoint;
-        }
+        /// <summary>
+        ///     The time at which the saga ID expired.
+        /// </summary>
+        public DateTime Time { get; set; }
 
-        #endregion
+        /// <summary>
+        ///     Store the headers to preserve them across timeouts.
+        /// </summary>
+        public string Headers { get; set; }
 
-        #region Public Properties
-
-        public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
-        {
-            get
-            {
-                return t => t.OwningTimeoutManager == _endpoint
-                            && t.Time > _now;
-            }
-        }
-
-        #endregion
+        /// <summary>
+        ///     Timeout endpoint name.
+        /// </summary>
+        public string Endpoint { get; set; }
     }
 }

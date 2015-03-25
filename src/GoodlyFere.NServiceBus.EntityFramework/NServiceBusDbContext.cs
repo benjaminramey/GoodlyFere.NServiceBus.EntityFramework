@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="EFDataContext.cs">
+//  <copyright file="EFDbContext.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -30,50 +30,18 @@
 #region Usings
 
 using System;
+using System.Data.Entity;
 using System.Linq;
-using GoodlyFere.Data;
+using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 
 #endregion
 
 namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    public class EFDataContext : BaseDataContext
+    public class NServiceBusDbContext : DbContext, INServiceBusDbContext
     {
-        #region Constants and Fields
-
-        private readonly EFDbContext _dbContext;
-
-        #endregion
-
-        #region Constructors and Destructors
-
-        public EFDataContext()
-        {
-            _dbContext = new EFDbContext();
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        public override void Dispose()
-        {
-            if (_dbContext != null)
-            {
-                _dbContext.Dispose();
-            }
-        }
-
-        #endregion
-
-        #region Methods
-
-        protected override IRepository<T> GetRepository<T>()
-        {
-            Type repoType = typeof(EFRepository<>).MakeGenericType(typeof(T));
-            return (IRepository<T>)Activator.CreateInstance(repoType, _dbContext);
-        }
-
-        #endregion
+        //public DbSet<SagaData> Sagas { get; set; }
+        //public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
 }

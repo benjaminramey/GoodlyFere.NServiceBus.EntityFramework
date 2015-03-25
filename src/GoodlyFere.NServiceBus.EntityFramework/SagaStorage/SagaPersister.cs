@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="HasSubscriberEndpoint.cs">
+//  <copyright file="EFSagaPersister.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,39 +31,66 @@
 
 using System;
 using System.Linq;
-using System.Linq.Expressions;
-using GoodlyFere.Criteria;
-using GoodlyFere.NServiceBus.EntityFramework.Model;
+using GoodlyFere.NServiceBus.EntityFramework.Criteria;
+using NServiceBus.Saga;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
+namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
-    public class HasSubscriberEndpoint : BinaryCriteria<Subscription>
+    public class SagaPersister : IPersistSagas
     {
         #region Constants and Fields
 
-        private readonly string _subscriberEndpoint;
+        private readonly IDataContext _dataContext;
 
         #endregion
 
         #region Constructors and Destructors
 
-        public HasSubscriberEndpoint(string subscriberEndpoint)
+        public SagaPersister(IDataContext dataContext)
         {
-            _subscriberEndpoint = subscriberEndpoint;
+            _dataContext = dataContext;
         }
 
         #endregion
 
-        #region Public Properties
+        #region Public Methods
 
-        public override Expression<Func<Subscription, bool>> Satisfier
+        public void Complete(IContainSagaData saga)
         {
-            get
+            var concreteSagaData = saga as SagaData;
+            concreteSagaData.IsCompleted = true;
+
+            _dataContext.Update(concreteSagaData);
+        }
+
+        public T Get<T>(Guid sagaId) where T : IContainSagaData
+        {
+            return _dataContext.FindById<T>(sagaId);
+        }
+
+        public T Get<T>(string property, object value) where T : IContainSagaData
+        {
+            return _dataContext.FindOne(new SagaCriteria<T>(property, value));
+        }
+
+        public void Save(IContainSagaData saga)
+        {
+            var concreteSagaData = saga as SagaData;
+
+            if (saga.Id == Guid.Empty)
             {
-                return s => s.SubscriberEndpoint == _subscriberEndpoint;
+                saga.Id = Guid.NewGuid();
             }
+
+            _dataContext.Create(concreteSagaData);
+        }
+
+        public void Update(IContainSagaData saga)
+        {
+            var concreteSagaData = saga as SagaData;
+            _dataContext.Update(concreteSagaData);
         }
 
         #endregion

@@ -1,7 +1,7 @@
 #region License
 
 // ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="BelongsToSaga.cs">
+//  <copyright file="SagaData.cs">
 //  GoodlyFere.NServiceBus.EntityFramework
 //  
 //  Copyright (C) 2014 
@@ -31,40 +31,20 @@
 
 using System;
 using System.Linq;
-using System.Linq.Expressions;
-using GoodlyFere.Criteria;
-using GoodlyFere.NServiceBus.EntityFramework.Model;
+using NServiceBus.Saga;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework.Criteria
+namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
-    public class BelongsToSaga : BinaryCriteria<TimeoutDataEntity>
+    public class SagaData : IContainSagaData
     {
-        #region Constants and Fields
-
-        private readonly Guid _sagaId;
-
-        #endregion
-
-        #region Constructors and Destructors
-
-        public BelongsToSaga(Guid sagaId)
-        {
-            _sagaId = sagaId;
-        }
-
-        #endregion
-
         #region Public Properties
 
-        public override Expression<Func<TimeoutDataEntity, bool>> Satisfier
-        {
-            get
-            {
-                return e => e.SagaId == _sagaId;
-            }
-        }
+        public Guid Id { get; set; }
+        public bool IsCompleted { get; set; }
+        public string OriginalMessageId { get; set; }
+        public string Originator { get; set; }
 
         #endregion
     }
