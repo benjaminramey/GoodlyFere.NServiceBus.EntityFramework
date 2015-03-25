@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+        <id>GoodlyFere.NServiceBus.EntityFramework</id>
+        <title>NServiceBus EntityFramework</title>
+        <version>$version$</version>
+        <authors>Ben Ramey</authors>
+        <owners>Ben Ramey</owners>
+        <licenseUrl>https://github.com/benjaminramey/GoodlyFere.NServiceBus.EntityFramework/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/benjaminramey/GoodlyFere.NServiceBus.EntityFramework</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>EntityFramework persisters for NServiceBus.</description>
+        <releaseNotes>Initial release.</releaseNotes>
+        <copyright>Copyright 2015</copyright>
+        <tags>nservicebus entityframework persisters</tags>
+    </metadata>
+</package>
