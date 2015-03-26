@@ -33,25 +33,5 @@ namespace GoodlyFere.NServiceBus.EntityFramework.Support
 
             return null;
         }
-
-        internal static string ToAddressString(this Address address)
-        {
-            if (address == null)
-            {
-                return null;
-            }
-
-            return Serializer.SerializeObject(address);
-        }
-
-        internal static Address ToAddress(this string addressString)
-        {
-            if (string.IsNullOrEmpty(addressString))
-            {
-                return null;
-            }
-
-            return (Address)Serializer.DeserializeObject(addressString, typeof(Address));
-        }
     }
 }

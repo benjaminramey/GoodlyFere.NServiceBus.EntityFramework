@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EntityFramework.Extensions;
 using GoodlyFere.NServiceBus.EntityFramework.Support;
+using NServiceBus;
 using NServiceBus.Timeout.Core;
 
 #endregion
@@ -28,7 +29,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
             TimeoutDataEntity timeoutEntity = new TimeoutDataEntity
             {
-                Destination = timeout.Destination.ToAddressString(),
+                Destination = timeout.Destination.ToString(),
                 Endpoint = timeout.OwningTimeoutManager,
                 Headers = timeout.Headers.ToDictionaryString(),
                 Id = timeoutId,
@@ -84,7 +85,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
             timeoutData = new TimeoutData
             {
-                Destination = entity.Destination.ToAddress(),
+                Destination = Address.Parse(entity.Destination),
                 Headers = entity.Headers.ToDictionary(),
                 Id = entity.Id.ToString(),
                 OwningTimeoutManager = entity.Endpoint,

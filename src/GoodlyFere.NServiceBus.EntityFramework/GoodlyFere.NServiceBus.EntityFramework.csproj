@@ -55,7 +55,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NServiceBusDbContext.cs" />
+    <Compile Include="NServiceBusDbContextFactory.cs" />
     <Compile Include="SharedConfig.cs" />
+    <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorage.cs" />
+    <Compile Include="SubscriptionStorage\SubscriptionEntity.cs" />
+    <Compile Include="SubscriptionStorage\SubscriptionPersister.cs" />
     <Compile Include="Support\CombGuid.cs" />
     <Compile Include="Support\SerializeHelper.cs" />
     <Compile Include="TimeoutStorage\EntityFrameworkTimeoutStorage.cs" />
