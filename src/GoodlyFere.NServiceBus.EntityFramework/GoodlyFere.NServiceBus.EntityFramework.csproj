@@ -59,10 +59,8 @@
     <Compile Include="Interfaces\ISagaDbContext.cs" />
     <Compile Include="Interfaces\ISubscriptionDbContext.cs" />
     <Compile Include="Interfaces\ITimeoutDbContext.cs" />
-    <Compile Include="DefaultDbContext.cs" />
     <Compile Include="SagaStorage\EntityFrameworkTimeoutStorage.cs" />
     <Compile Include="SagaStorage\SagaPersister.cs" />
-    <Compile Include="SharedConfig.cs" />
     <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorage.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionEntity.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionPersister.cs" />
