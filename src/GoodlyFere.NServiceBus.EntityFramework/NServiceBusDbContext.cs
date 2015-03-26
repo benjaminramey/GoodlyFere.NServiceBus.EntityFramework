@@ -32,6 +32,7 @@
 using System;
 using System.Data.Entity;
 using System.Linq;
+using GoodlyFere.NServiceBus.EntityFramework.SagaStorage;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 
@@ -41,7 +42,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework
 {
     public class NServiceBusDbContext : DbContext
     {
-        //public DbSet<SagaData> Sagas { get; set; }
         public DbSet<SubscriptionEntity> Subscriptions { get; set; }
         public DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }

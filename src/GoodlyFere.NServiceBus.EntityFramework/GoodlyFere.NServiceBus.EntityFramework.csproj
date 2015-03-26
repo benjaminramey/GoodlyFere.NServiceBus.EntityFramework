@@ -56,6 +56,8 @@
   <ItemGroup>
     <Compile Include="NServiceBusDbContext.cs" />
     <Compile Include="NServiceBusDbContextFactory.cs" />
+    <Compile Include="SagaStorage\EntityFrameworkTimeoutStorage.cs" />
+    <Compile Include="SagaStorage\SagaPersister.cs" />
     <Compile Include="SharedConfig.cs" />
     <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorage.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionEntity.cs" />

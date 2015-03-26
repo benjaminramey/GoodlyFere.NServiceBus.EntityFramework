@@ -30,6 +30,7 @@
 #region Usings
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using NServiceBus;
 
@@ -42,6 +43,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
         /// <summary>
         ///     Id of this timeout.
         /// </summary>
+        [Key]
         public Guid Id { get; set; }
 
         /// <summary>

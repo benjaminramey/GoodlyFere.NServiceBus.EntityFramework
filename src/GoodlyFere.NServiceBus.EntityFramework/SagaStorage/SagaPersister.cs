@@ -30,69 +30,114 @@
 #region Usings
 
 using System;
+using System.Data;
+using System.Data.Entity;
 using System.Linq;
-using GoodlyFere.NServiceBus.EntityFramework.Criteria;
+using System.Linq.Dynamic;
+using System.Linq.Expressions;
 using NServiceBus.Saga;
 
 #endregion
 
 namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
-    public class SagaPersister : IPersistSagas
+    public class SagaPersister : ISagaPersister
     {
-        #region Constants and Fields
+        private readonly NServiceBusDbContextFactory _dbContextFactory;
 
-        private readonly IDataContext _dataContext;
-
-        #endregion
-
-        #region Constructors and Destructors
-
-        public SagaPersister(IDataContext dataContext)
+        public SagaPersister()
         {
-            _dataContext = dataContext;
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        public void Complete(IContainSagaData saga)
-        {
-            var concreteSagaData = saga as SagaData;
-            concreteSagaData.IsCompleted = true;
-
-            _dataContext.Update(concreteSagaData);
-        }
-
-        public T Get<T>(Guid sagaId) where T : IContainSagaData
-        {
-            return _dataContext.FindById<T>(sagaId);
-        }
-
-        public T Get<T>(string property, object value) where T : IContainSagaData
-        {
-            return _dataContext.FindOne(new SagaCriteria<T>(property, value));
+            _dbContextFactory = new NServiceBusDbContextFactory();
         }
 
         public void Save(IContainSagaData saga)
         {
-            var concreteSagaData = saga as SagaData;
+            saga.Id = Support.CombGuid.NewGuid();
 
-            if (saga.Id == Guid.Empty)
+            using (var dbc = _dbContextFactory.Create())
             {
-                saga.Id = Guid.NewGuid();
+                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    dbc.Set(saga.GetType()).Add(saga);
+                    dbc.SaveChanges();
+                    transaction.Commit();
+                }
             }
-
-            _dataContext.Create(concreteSagaData);
         }
 
         public void Update(IContainSagaData saga)
         {
-            var concreteSagaData = saga as SagaData;
-            _dataContext.Update(concreteSagaData);
+            using (var dbc = _dbContextFactory.Create())
+            {
+                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    object existingEnt = dbc.Set(saga.GetType()).Find(saga.Id);
+                    if (existingEnt == null)
+                    {
+                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                    }
+
+                    var entry = dbc.Entry(existingEnt);
+                    entry.CurrentValues.SetValues(saga);
+                    entry.State = EntityState.Modified;
+                    dbc.SaveChanges();
+                    transaction.Commit();
+                }
+            }
         }
 
-        #endregion
+        public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
+        {
+            using (var dbc = _dbContextFactory.Create())
+            {
+                object result = dbc.Set(typeof(TSagaData)).Find(sagaId);
+                return (TSagaData)(result ?? default(TSagaData));
+            }
+        }
+
+        public TSagaData Get<TSagaData>(string propertyName, object propertyValue) where TSagaData : IContainSagaData
+        {
+            ParameterExpression param = Expression.Parameter(typeof(object));
+            Expression<Func<TSagaData, bool>> filter = Expression.Lambda<Func<TSagaData, bool>>(
+                Expression.MakeBinary(
+                    ExpressionType.Equal,
+                    Expression.Property(param, propertyName),
+                    Expression.Constant(propertyValue)),
+                param);
+
+            using (var dbc = _dbContextFactory.Create())
+            {
+                IQueryable result = dbc.Set(typeof(TSagaData)).Where(filter.ToString());
+
+                if (result.Any())
+                {
+                    return (TSagaData)result.Take(1);
+                }
+
+                return default(TSagaData);
+            }
+        }
+
+        public void Complete(IContainSagaData saga)
+        {
+            using (var dbc = _dbContextFactory.Create())
+            {
+                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    try
+                    {
+                        dbc.Set(saga.GetType()).Remove(saga);
+
+                        dbc.SaveChanges();
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
     }
 }

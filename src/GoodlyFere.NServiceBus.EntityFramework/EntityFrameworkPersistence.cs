@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus.Features;
 using NServiceBus.Persistence;
@@ -21,8 +22,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework
         public EntityFrameworkPersistence()
         {
             Supports<StorageType.Timeouts>(s => s.EnableFeatureByDefault<EntityFrameworkTimeoutStorage>());
+            Supports<StorageType.Subscriptions>(s => s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorage>());
             //Supports<StorageType.Sagas>(s => s.EnableFeatureByDefault<EntityFrameworkSagaStorage>());
-            //Supports<StorageType.Subscriptions>(s => s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorage>());
             //Supports<StorageType.Outbox>(s => s.EnableFeatureByDefault<EntityFrameworkOutboxStorage>());
         }
     }
