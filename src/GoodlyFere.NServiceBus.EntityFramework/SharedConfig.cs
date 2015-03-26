@@ -23,18 +23,5 @@ namespace GoodlyFere.NServiceBus.EntityFramework
             persistenceConfiguration.GetSettings().Set("EntityFramework.Common.ConnectionString", connectionString);
             return persistenceConfiguration;
         }
-
-        /// <summary>
-        ///     Configures all storage to use an existing EntityFramework DbContext.
-        /// </summary>
-        /// <param name="persistenceConfiguration"></param>
-        /// <param name="dbContext">Existing EntityFramework DbContext</param>
-        public static PersistenceExtentions<EntityFrameworkPersistence> UseExistingDbContext(
-            this PersistenceExtentions<EntityFrameworkPersistence> persistenceConfiguration,
-            INServiceBusDbContext dbContext)
-        {
-            persistenceConfiguration.GetSettings().Set("EntityFramework.Common.DbContext", dbContext);
-            return persistenceConfiguration;
-        }
     }
 }

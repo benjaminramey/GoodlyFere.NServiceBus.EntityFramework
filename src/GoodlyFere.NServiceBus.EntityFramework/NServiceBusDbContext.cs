@@ -38,7 +38,7 @@ using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 
 namespace GoodlyFere.NServiceBus.EntityFramework
 {
-    public class NServiceBusDbContext : DbContext, INServiceBusDbContext
+    public class NServiceBusDbContext : DbContext
     {
         //public DbSet<SagaData> Sagas { get; set; }
         //public DbSet<Subscription> Subscriptions { get; set; }

@@ -55,7 +55,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NServiceBusDbContext.cs" />
-    <Compile Include="INServiceBusDbContext.cs" />
     <Compile Include="SharedConfig.cs" />
     <Compile Include="Support\CombGuid.cs" />
     <Compile Include="Support\SerializeHelper.cs" />
