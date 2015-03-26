@@ -17,13 +17,18 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
     public class TimeoutPersister : IPersistTimeouts
     {
         private readonly INServiceBusDbContextFactory _dbContextFactory;
-        private readonly string _endpointName;
 
-        public TimeoutPersister(string endpointName, INServiceBusDbContextFactory dbContextFactory)
+        public TimeoutPersister(INServiceBusDbContextFactory dbContextFactory)
         {
+            if (dbContextFactory == null)
+            {
+                throw new ArgumentNullException("dbContextFactory");
+            }
+
             _dbContextFactory = dbContextFactory;
-            _endpointName = endpointName;
         }
+
+        public string EndpointName { get; set; }
 
         public void Add(TimeoutData timeout)
         {
@@ -64,18 +69,20 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
             using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
-                var matchingTimeouts = dbc.Timeouts
+                List<TimeoutDataEntity> matchingTimeouts = dbc.Timeouts
                     .Where(
-                        t => t.Endpoint == _endpointName
+                        t => t.Endpoint == EndpointName
                              && t.Time >= startSlice
                              && t.Time <= now)
                     .OrderBy(t => t.Time)
+                    .ToList();
+
+                List<Tuple<string, DateTime>> chunks = matchingTimeouts
                     .Select(t => new Tuple<string, DateTime>(t.Id.ToString(), t.Time))
                     .ToList();
 
-                var startOfNextChunk = dbc.Timeouts
-                    .Where(t => t.Endpoint == _endpointName)
-                    .Where(t => t.Time > now)
+                TimeoutDataEntity startOfNextChunk = dbc.Timeouts
+                    .Where(t => t.Endpoint == EndpointName && t.Time > now)
                     .OrderBy(t => t.Time)
                     .Take(1)
                     .SingleOrDefault();
@@ -84,7 +91,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                     ? startOfNextChunk.Time
                     : DateTime.UtcNow.AddMinutes(10);
 
-                return matchingTimeouts;
+                return chunks;
             }
         }
 
@@ -108,7 +115,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    TimeoutDataEntity entity = dbc.Timeouts.Find(timeoutId);
+                    TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));
 
                     if (entity == null)
                     {

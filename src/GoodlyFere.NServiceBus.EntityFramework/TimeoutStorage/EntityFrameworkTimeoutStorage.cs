@@ -21,7 +21,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
-            context.Container.ConfigureComponent<TimeoutPersister>(DependencyLifecycle.InstancePerCall);
+            context.Container
+                .ConfigureComponent<TimeoutPersister>(DependencyLifecycle.InstancePerCall)
+                .ConfigureProperty(p => p.EndpointName, context.Settings.EndpointName());
         }
     }
 }
