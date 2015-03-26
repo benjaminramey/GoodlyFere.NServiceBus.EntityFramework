@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using EntityFramework.Extensions;
+using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
@@ -15,11 +16,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 {
     public class SubscriptionPersister : ISubscriptionStorage
     {
-        private readonly NServiceBusDbContextFactory _dbContextFactory;
+        private readonly INServiceBusDbContextFactory _dbContextFactory;
 
-        public SubscriptionPersister()
+        public SubscriptionPersister(INServiceBusDbContextFactory dbContextFactory)
         {
-            _dbContextFactory = new NServiceBusDbContextFactory();
+            _dbContextFactory = dbContextFactory;
         }
 
         public void Subscribe(Address client, IEnumerable<MessageType> messageTypes)
@@ -41,7 +42,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     });
             }
 
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
@@ -76,7 +77,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public void Unsubscribe(Address client, IEnumerable<MessageType> messageTypes)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
@@ -104,7 +105,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public IEnumerable<Address> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
@@ -119,7 +120,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
                         return subscriptions
                             .Select(s => Address.Parse(s.SubscriberEndpoint))
-                            .ToList(); 
+                            .ToList();
                     }
                     catch (Exception)
                     {
@@ -132,7 +133,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public void Init()
         {
-
         }
     }
 }

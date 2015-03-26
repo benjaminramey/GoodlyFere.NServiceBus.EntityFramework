@@ -35,6 +35,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Linq.Dynamic;
 using System.Linq.Expressions;
+using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus.Saga;
 
 #endregion
@@ -43,22 +44,22 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
     public class SagaPersister : ISagaPersister
     {
-        private readonly NServiceBusDbContextFactory _dbContextFactory;
+        private readonly INServiceBusDbContextFactory _dbContextFactory;
 
-        public SagaPersister()
+        public SagaPersister(INServiceBusDbContextFactory dbContextFactory)
         {
-            _dbContextFactory = new NServiceBusDbContextFactory();
+            _dbContextFactory = dbContextFactory;
         }
 
         public void Save(IContainSagaData saga)
         {
             saga.Id = Support.CombGuid.NewGuid();
 
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    dbc.Set(saga.GetType()).Add(saga);
+                    dbc.SagaSet(saga.GetType()).Add(saga);
                     dbc.SaveChanges();
                     transaction.Commit();
                 }
@@ -67,11 +68,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public void Update(IContainSagaData saga)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    object existingEnt = dbc.Set(saga.GetType()).Find(saga.Id);
+                    object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
                     if (existingEnt == null)
                     {
                         throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
@@ -88,9 +89,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                object result = dbc.Set(typeof(TSagaData)).Find(sagaId);
+                object result = dbc.SagaSet(typeof(TSagaData)).Find(sagaId);
                 return (TSagaData)(result ?? default(TSagaData));
             }
         }
@@ -105,7 +106,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 IQueryable result = dbc.Set(typeof(TSagaData)).Where(filter.ToString());
 
@@ -120,7 +121,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public void Complete(IContainSagaData saga)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {

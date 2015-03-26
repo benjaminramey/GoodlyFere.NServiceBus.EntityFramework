@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using EntityFramework.Extensions;
+using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.Support;
 using NServiceBus;
 using NServiceBus.Timeout.Core;
@@ -15,12 +16,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 {
     public class TimeoutPersister : IPersistTimeouts
     {
-        private readonly NServiceBusDbContextFactory _dbContextFactory;
+        private readonly INServiceBusDbContextFactory _dbContextFactory;
         private readonly string _endpointName;
 
-        public TimeoutPersister(string endpointName)
+        public TimeoutPersister(string endpointName, INServiceBusDbContextFactory dbContextFactory)
         {
-            _dbContextFactory = new NServiceBusDbContextFactory();
+            _dbContextFactory = dbContextFactory;
             _endpointName = endpointName;
         }
 
@@ -38,7 +39,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                 Time = timeout.Time
             };
 
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
@@ -61,7 +62,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
         {
             DateTime now = DateTime.UtcNow;
 
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 var matchingTimeouts = dbc.Timeouts
                     .Where(
@@ -89,7 +90,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         public void RemoveTimeoutBy(Guid sagaId)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
@@ -103,7 +104,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
         {
-            using (var dbc = _dbContextFactory.Create())
+            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {

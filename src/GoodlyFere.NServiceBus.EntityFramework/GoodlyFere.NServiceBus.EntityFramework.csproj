@@ -54,8 +54,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="NServiceBusDbContext.cs" />
-    <Compile Include="NServiceBusDbContextFactory.cs" />
+    <Compile Include="Interfaces\INServiceBusDbContext.cs" />
+    <Compile Include="Interfaces\INServiceBusDbContextFactory.cs" />
+    <Compile Include="Interfaces\ISagaDbContext.cs" />
+    <Compile Include="Interfaces\ISubscriptionDbContext.cs" />
+    <Compile Include="Interfaces\ITimeoutDbContext.cs" />
+    <Compile Include="DefaultDbContext.cs" />
     <Compile Include="SagaStorage\EntityFrameworkTimeoutStorage.cs" />
     <Compile Include="SagaStorage\SagaPersister.cs" />
     <Compile Include="SharedConfig.cs" />
