@@ -30,6 +30,8 @@
 #region Usings
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Linq;
@@ -53,6 +55,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public void Save(IContainSagaData saga)
         {
+            if (saga == null)
+            {
+                throw new ArgumentNullException("saga");
+            }
+
             saga.Id = Support.CombGuid.NewGuid();
 
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
@@ -68,6 +75,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public void Update(IContainSagaData saga)
         {
+            if (saga == null)
+            {
+                throw new ArgumentNullException("saga");
+            }
+
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
@@ -89,6 +101,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
         {
+            if (sagaId == Guid.Empty)
+            {
+                throw new ArgumentException("sagaId cannot be empty.", "sagaId");
+            }
+
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 object result = dbc.SagaSet(typeof(TSagaData)).Find(sagaId);
@@ -98,21 +115,31 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public TSagaData Get<TSagaData>(string propertyName, object propertyValue) where TSagaData : IContainSagaData
         {
-            ParameterExpression param = Expression.Parameter(typeof(object));
+            ParameterExpression param = Expression.Parameter(typeof(TSagaData), "sagaData");
             Expression<Func<TSagaData, bool>> filter = Expression.Lambda<Func<TSagaData, bool>>(
                 Expression.MakeBinary(
                     ExpressionType.Equal,
                     Expression.Property(param, propertyName),
                     Expression.Constant(propertyValue)),
                 param);
-
+            
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                IQueryable result = dbc.Set(typeof(TSagaData)).Where(filter.ToString());
+                IQueryable setQueryable = dbc.SagaSet(typeof(TSagaData)).AsQueryable();
+                IQueryable result = setQueryable
+                    .Provider
+                    .CreateQuery(
+                        Expression.Call(
+                            typeof(Queryable),
+                            "Where",
+                            new[] { typeof(TSagaData) },
+                            setQueryable.Expression,
+                            Expression.Quote(filter)));
 
-                if (result.Any())
+                var enumerator = result.GetEnumerator();
+                if (enumerator.MoveNext())
                 {
-                    return (TSagaData)result.Take(1);
+                    return (TSagaData)enumerator.Current;
                 }
 
                 return default(TSagaData);
