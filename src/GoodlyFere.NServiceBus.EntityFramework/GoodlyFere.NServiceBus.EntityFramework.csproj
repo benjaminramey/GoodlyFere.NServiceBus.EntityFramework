@@ -60,7 +60,7 @@
     <Compile Include="Interfaces\ISubscriptionDbContext.cs" />
     <Compile Include="Interfaces\ITimeoutDbContext.cs" />
     <Compile Include="InternalsVisibleTo.cs" />
-    <Compile Include="SagaStorage\EntityFrameworkTimeoutStorage.cs" />
+    <Compile Include="SagaStorage\EntityFrameworkSagaStorage.cs" />
     <Compile Include="SagaStorage\SagaPersister.cs" />
     <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorage.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionEntity.cs" />

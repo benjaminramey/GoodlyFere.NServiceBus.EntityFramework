@@ -84,9 +84,9 @@
   <ItemGroup>
     <Compile Include="EntityFrameworkPersistenceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SagaStorage\EntityFrameworkTimeoutStorageTests.cs" />
+    <Compile Include="SagaStorage\EntityFrameworkSagaStorageTests.cs" />
     <Compile Include="SagaStorage\SagaPersisterTests.cs" />
-    <Compile Include="SagaStorage\TestSagaDbContext.cs" />
+    <Compile Include="TestSagaDbContext.cs" />
     <Compile Include="Support\CombGuidTests.cs" />
     <Compile Include="Support\SerializeHelperTests.cs" />
   </ItemGroup>

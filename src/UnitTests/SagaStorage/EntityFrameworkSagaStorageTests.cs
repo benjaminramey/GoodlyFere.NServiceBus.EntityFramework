@@ -8,7 +8,7 @@ using Xunit;
 
 namespace UnitTests.SagaStorage
 {
-    public class EntityFrameworkTimeoutStorageTests
+    public class EntityFrameworkSagaStorageTests
     {
     }
 }
