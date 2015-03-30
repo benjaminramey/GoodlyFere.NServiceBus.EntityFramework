@@ -8,7 +8,7 @@ using NServiceBus.Saga;
 
 #endregion
 
-namespace UnitTests
+namespace UnitTests.SagaStorage
 {
     internal class TestSagaDbContext : DbContext, ISagaDbContext
     {
