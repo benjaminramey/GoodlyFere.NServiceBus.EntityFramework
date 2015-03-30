@@ -87,8 +87,7 @@
     <Compile Include="SagaStorage\EntityFrameworkSagaStorageTests.cs" />
     <Compile Include="SagaStorage\SagaPersisterTests.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionPersisterTests.cs" />
-    <Compile Include="SagaStorage\TestSagaDbContext.cs" />
-    <Compile Include="SubscriptionStorage\TestSubscriptionDbContext.cs" />
+    <Compile Include="TestDbContext.cs" />
     <Compile Include="Support\CombGuidTests.cs" />
     <Compile Include="Support\SerializeHelperTests.cs" />
   </ItemGroup>

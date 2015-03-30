@@ -20,7 +20,7 @@ namespace UnitTests.SagaStorage
         public SagaPersisterTests()
         {
             _mockFactory = new Mock<INServiceBusDbContextFactory>();
-            _mockFactory.Setup(m => m.CreateSagaDbContext()).Returns(new TestSagaDbContext());
+            _mockFactory.Setup(m => m.CreateSagaDbContext()).Returns(new TestDbContext());
 
             _persister = new SagaPersister(_mockFactory.Object);
         }
@@ -55,7 +55,7 @@ namespace UnitTests.SagaStorage
             _persister.Save(sagaData);
 
             sagaData.Id.Should().NotBeEmpty();
-            var fromDb = (new TestSagaDbContext()).TestSagas.Find(sagaData.Id);
+            var fromDb = (new TestDbContext()).TestSagas.Find(sagaData.Id);
 
             fromDb.ShouldBeEquivalentTo(sagaData);
             fromDb.Id.Should().Be(sagaData.Id);
@@ -79,7 +79,7 @@ namespace UnitTests.SagaStorage
             sagaData.SomeProp1 = "some other value";
             _persister.Update(sagaData);
 
-            var fromDb = (new TestSagaDbContext()).TestSagas.Find(sagaData.Id);
+            var fromDb = (new TestDbContext()).TestSagas.Find(sagaData.Id);
 
             fromDb.ShouldBeEquivalentTo(sagaData);
             fromDb.Id.Should().Be(sagaData.Id);
@@ -121,7 +121,7 @@ namespace UnitTests.SagaStorage
                 SomeProp1 = Guid.NewGuid().ToString(),
                 SomeProp2 = "somep prop 2"
             };
-            var dbContext = new TestSagaDbContext();
+            var dbContext = new TestDbContext();
 
             dbContext.TestSagas.Add(sagaData);
             dbContext.SaveChanges();
@@ -161,7 +161,7 @@ namespace UnitTests.SagaStorage
         public void GetByProp_NoResults_ReturnsNull()
         {
             // make sure there are no testsagadata items in db
-            var dbContext = new TestSagaDbContext();
+            var dbContext = new TestDbContext();
             dbContext.Database.ExecuteSqlCommand("delete from testsagadatas");
 
             var result = _persister.Get<TestSagaData>("SomeProp1", "some value");
@@ -177,7 +177,7 @@ namespace UnitTests.SagaStorage
 
             _persister.Complete(sagaData);
 
-            var dbContext = new TestSagaDbContext();
+            var dbContext = new TestDbContext();
             dbContext.TestSagas.Find(sagaData.Id).Should().BeNull();
         }
 
@@ -207,7 +207,7 @@ namespace UnitTests.SagaStorage
                 SomeProp1 = "some prop 1",
                 SomeProp2 = "somep prop 2"
             };
-            var dbContext = new TestSagaDbContext();
+            var dbContext = new TestDbContext();
 
             dbContext.TestSagas.Add(sagaData);
             dbContext.SaveChanges();

@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using EntityFramework.Extensions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus;
 using NServiceBus.Unicast.Subscriptions;
@@ -25,11 +24,21 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public void Subscribe(Address client, IEnumerable<MessageType> messageTypes)
         {
+            if (client == null)
+            {
+                throw new ArgumentNullException("client");
+            }
+
+            if (messageTypes == null)
+            {
+                throw new ArgumentNullException("messageTypes");
+            }
+
             string clientAddress = client.ToString();
             List<string> messageTypeStrings = new List<string>();
             List<SubscriptionEntity> subscriptions = new List<SubscriptionEntity>();
 
-            foreach (MessageType mt in messageTypes)
+            foreach (MessageType mt in messageTypes.Distinct())
             {
                 string messageTypeString = mt.ToString();
 
@@ -50,8 +59,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     {
                         var existing = dbc.Subscriptions.Where(
                             s => s.SubscriberEndpoint == clientAddress
-                                 && messageTypeStrings.Contains(s.MessageType))
-                            .ToList();
+                                 && messageTypeStrings.Contains(s.MessageType));
 
                         foreach (var subscription in subscriptions)
                         {
@@ -77,6 +85,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public void Unsubscribe(Address client, IEnumerable<MessageType> messageTypes)
         {
+            if (client == null)
+            {
+                throw new ArgumentNullException("client");
+            }
+
+            if (messageTypes == null)
+            {
+                throw new ArgumentNullException("messageTypes");
+            }
+
             using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
@@ -86,10 +104,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
                     try
                     {
-                        dbc.Subscriptions.Where(
+                        List<SubscriptionEntity> existing = dbc.Subscriptions.Where(
                             s => s.SubscriberEndpoint == clientAddress
                                  && messageTypeStrings.Contains(s.MessageType))
-                            .Delete();
+                            .ToList();
+
+                        dbc.Subscriptions.RemoveRange(existing);
 
                         dbc.SaveChanges();
                         transaction.Commit();

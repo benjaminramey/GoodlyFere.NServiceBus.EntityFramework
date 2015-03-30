@@ -30,13 +30,10 @@
 #region Usings
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Linq.Dynamic;
 using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus.Saga;

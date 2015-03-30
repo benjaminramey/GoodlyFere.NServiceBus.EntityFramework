@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using EntityFramework.Extensions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.Support;
 using NServiceBus;
@@ -101,7 +100,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    dbc.Timeouts.Where(t => t.SagaId == sagaId).Delete();
+                    var toDelete = dbc.Timeouts.Where(t => t.SagaId == sagaId);
+                    dbc.Timeouts.RemoveRange(toDelete);
 
                     dbc.SaveChanges();
                     transaction.Commit();
