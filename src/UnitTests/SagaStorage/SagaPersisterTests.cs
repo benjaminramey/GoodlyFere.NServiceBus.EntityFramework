@@ -1,13 +1,11 @@
 ﻿#region Usings
 
 using System;
-using System.IO;
 using System.Linq;
 using FluentAssertions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SagaStorage;
 using Moq;
-using NServiceBus.IdGeneration;
 using Xunit;
 
 #endregion
@@ -76,18 +74,7 @@ namespace UnitTests.SagaStorage
         [Fact]
         public void Update_ShouldSaveSaga()
         {
-            var sagaData = new TestSagaData
-            {
-                Id= Guid.NewGuid(),
-                Originator = "originator yeah",
-                OriginalMessageId = "original message id",
-                SomeProp1 = "some prop 1",
-                SomeProp2 = "somep prop 2"
-            };
-            var dbContext = new TestSagaDbContext();
-
-            dbContext.TestSagas.Add(sagaData);
-            dbContext.SaveChanges();
+            var sagaData = AddSaga();
 
             sagaData.SomeProp1 = "some other value";
             _persister.Update(sagaData);
@@ -111,18 +98,7 @@ namespace UnitTests.SagaStorage
         [Fact]
         public void Get_Id_GetsSaga()
         {
-            var sagaData = new TestSagaData
-            {
-                Id = Guid.NewGuid(),
-                Originator = "originator yeah",
-                OriginalMessageId = "original message id",
-                SomeProp1 = "some prop 1",
-                SomeProp2 = "somep prop 2"
-            };
-            var dbContext = new TestSagaDbContext();
-
-            dbContext.TestSagas.Add(sagaData);
-            dbContext.SaveChanges();
+            var sagaData = AddSaga();
 
             var retrievedSaga = _persister.Get<TestSagaData>(sagaData.Id);
 
@@ -158,6 +134,84 @@ namespace UnitTests.SagaStorage
             sagaData.Originator.Should().Be(retrievedSaga.Originator);
             sagaData.SomeProp1.Should().Be(retrievedSaga.SomeProp1);
             sagaData.SomeProp2.Should().Be(retrievedSaga.SomeProp2);
+        }
+
+        [Fact]
+        public void GetByProp_NullPropName_Throws()
+        {
+            _persister.Invoking(p => p.Get<TestSagaData>(null, "bob"))
+                .ShouldThrow<ArgumentNullException>();
+        }
+
+        [Fact]
+        public void GetByProp_EmptyPropName_Throws()
+        {
+            _persister.Invoking(p => p.Get<TestSagaData>(string.Empty, "bob"))
+                .ShouldThrow<ArgumentNullException>();
+        }
+
+        [Fact]
+        public void GetByProp_NonExistentProp_Throws()
+        {
+            _persister.Invoking(p => p.Get<TestSagaData>("non-existent property name", "bob"))
+                .ShouldThrow<ArgumentException>();
+        }
+
+        [Fact]
+        public void GetByProp_NoResults_ReturnsNull()
+        {
+            // make sure there are no testsagadata items in db
+            var dbContext = new TestSagaDbContext();
+            dbContext.Database.ExecuteSqlCommand("delete from testsagadatas");
+
+            var result = _persister.Get<TestSagaData>("SomeProp1", "some value");
+
+            result.Should().BeNull();
+        }
+
+        // complete, delete saga
+        [Fact]
+        public void Complete_DeletesSaga()
+        {
+            var sagaData = AddSaga();
+
+            _persister.Complete(sagaData);
+
+            var dbContext = new TestSagaDbContext();
+            dbContext.TestSagas.Find(sagaData.Id).Should().BeNull();
+        }
+
+        [Fact]
+        public void Complete_NullSaga_Throws()
+        {
+            _persister.Invoking(p => p.Complete(null))
+                .ShouldThrow<ArgumentNullException>();
+        }
+
+        [Fact]
+        public void Complete_NonExistentSaga_DoesNothing()
+        {
+            var sagaData = new TestSagaData();
+
+            _persister.Invoking(p => p.Complete(sagaData))
+                .ShouldNotThrow();
+        }
+
+        private static TestSagaData AddSaga()
+        {
+            var sagaData = new TestSagaData
+            {
+                Id = Guid.NewGuid(),
+                Originator = "originator yeah",
+                OriginalMessageId = "original message id",
+                SomeProp1 = "some prop 1",
+                SomeProp2 = "somep prop 2"
+            };
+            var dbContext = new TestSagaDbContext();
+
+            dbContext.TestSagas.Add(sagaData);
+            dbContext.SaveChanges();
+            return sagaData;
         }
     }
 }

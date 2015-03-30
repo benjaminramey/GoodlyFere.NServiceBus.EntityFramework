@@ -34,6 +34,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Dynamic;
 using System.Linq.Expressions;
@@ -115,6 +116,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public TSagaData Get<TSagaData>(string propertyName, object propertyValue) where TSagaData : IContainSagaData
         {
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException("propertyName");
+            }
+
             ParameterExpression param = Expression.Parameter(typeof(TSagaData), "sagaData");
             Expression<Func<TSagaData, bool>> filter = Expression.Lambda<Func<TSagaData, bool>>(
                 Expression.MakeBinary(
@@ -122,7 +128,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Property(param, propertyName),
                     Expression.Constant(propertyValue)),
                 param);
-            
+
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 IQueryable setQueryable = dbc.SagaSet(typeof(TSagaData)).AsQueryable();
@@ -148,16 +154,34 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public void Complete(IContainSagaData saga)
         {
+            if (saga == null)
+            {
+                throw new ArgumentNullException("saga");
+            }
+
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
                     try
                     {
-                        dbc.Set(saga.GetType()).Remove(saga);
+                        DbEntityEntry entry = dbc.Entry(saga);
+                        DbSet set = dbc.SagaSet(saga.GetType());
+
+                        if (entry.State == EntityState.Detached)
+                        {
+                            set.Attach(saga);
+                        }
+
+                        set.Remove(saga);
 
                         dbc.SaveChanges();
                         transaction.Commit();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        transaction.Rollback();
+                        // don't do anything, if we couldn't delete because it doesn't exist, that's OK
                     }
                     catch (Exception)
                     {
