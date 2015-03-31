@@ -134,6 +134,52 @@ namespace UnitTests.SubscriptionStorage
                 .Should().Be(0);
         }
 
+        [Fact]
+        public void GetSubscriberAddressesForMessage_GetsUniqueAddressesForMessages()
+        {
+            AddSubscriptions();
+            string mtString = new MessageType(typeof(TestMessage)).ToString();
+            string mtString2 = new MessageType(typeof(TestMessage2)).ToString();
+            int expectedCount = _dbContext.Subscriptions
+                .Where(
+                    s =>
+                        s.MessageType == mtString
+                        || s.MessageType == mtString2)
+                .Select(s => s.SubscriberEndpoint)
+                .Distinct()
+                .Count();
+
+            var result = _persister.GetSubscriberAddressesForMessage(
+                new List<MessageType>
+                {
+                    new MessageType(typeof(TestMessage)),
+                    new MessageType(typeof(TestMessage2))
+                });
+
+            result.Count().Should().BeGreaterThan(0);
+            result.Count().Should().Be(expectedCount);
+            result.Distinct().Count().Should().Be(result.Count());
+        }
+
+        [Fact]
+        public void GetSubscriberAddressesForMessage_NullMessages_Throws()
+        {
+            _persister.Invoking(p => p.GetSubscriberAddressesForMessage(null))
+                .ShouldThrow<ArgumentNullException>();
+
+            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+        }
+
+        [Fact]
+        public void GetSubscriberAddressesForMessage_EmptyMessages_ReturnsEmpty()
+        {
+            var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
+
+            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+            result.Should().NotBeNull();
+            result.Count().Should().Be(0);
+        }
+
         private void AddSubscriptions()
         {
             _dbContext.Subscriptions.AddRange(
@@ -142,6 +188,11 @@ namespace UnitTests.SubscriptionStorage
                     new SubscriptionEntity
                     {
                         MessageType = new MessageType(typeof(TestMessage)).ToString(),
+                        SubscriberEndpoint = "queue@machine"
+                    },
+                    new SubscriptionEntity
+                    {
+                        MessageType = new MessageType(typeof(TestMessage2)).ToString(),
                         SubscriberEndpoint = "queue@machine"
                     },
                     new SubscriptionEntity
