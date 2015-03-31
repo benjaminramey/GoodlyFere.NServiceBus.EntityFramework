@@ -13,7 +13,7 @@ using NServiceBus.Saga;
 
 namespace UnitTests
 {
-    internal class TestDbContext : DbContext, ISagaDbContext, ISubscriptionDbContext, ITimeoutDbContext
+    public class TestDbContext : DbContext, ISagaDbContext, ISubscriptionDbContext, ITimeoutDbContext
     {
         public TestDbContext()
             : base("testdb")
@@ -22,7 +22,7 @@ namespace UnitTests
 
         public DbSet<TestSagaData> TestSagas { get; set; }
 
-        public DbSet SagaSet(Type sagaDataType)
+        public virtual DbSet SagaSet(Type sagaDataType)
         {
             if (sagaDataType == typeof(TestSagaData))
             {

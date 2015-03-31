@@ -1,11 +1,13 @@
 ﻿#region Usings
 
 using System;
+using System.Data.Entity;
 using System.Linq;
 using FluentAssertions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SagaStorage;
 using Moq;
+using NServiceBus.Saga;
 using Xunit;
 
 #endregion
@@ -87,6 +89,18 @@ namespace UnitTests.SagaStorage
             fromDb.Originator.Should().Be(sagaData.Originator);
             fromDb.SomeProp1.Should().Be(sagaData.SomeProp1);
             fromDb.SomeProp2.Should().Be(sagaData.SomeProp2);
+        }
+
+        [Fact]
+        public void Update_NonExistentSaga_Throws()
+        {
+            var saga = new TestSagaData
+            {
+                Id = Guid.NewGuid()
+            };
+
+            _persister.Invoking(p => p.Update(saga))
+                .ShouldThrow<Exception>();
         }
 
         [Fact]
@@ -195,6 +209,23 @@ namespace UnitTests.SagaStorage
 
             _persister.Invoking(p => p.Complete(sagaData))
                 .ShouldNotThrow();
+        }
+
+        [Fact]
+        public void Complete_ContextThrows_Throws()
+        {
+            var realDbContext = new TestDbContext();
+            var saga = AddSaga();
+            var mockDbContext = new Mock<ISagaDbContext>();
+            mockDbContext.SetupGet(m => m.Database).Returns(realDbContext.Database);
+            mockDbContext.Setup(m => m.Entry(It.IsAny<IContainSagaData>()))
+                .Throws(new Exception("test exception"));
+            _mockFactory.Setup(m => m.CreateSagaDbContext())
+                .Returns(mockDbContext.Object);
+
+            _persister.Invoking(p => p.Complete(saga))
+                .ShouldThrow<Exception>()
+                .WithMessage("test exception");
         }
 
         private static TestSagaData AddSaga()
