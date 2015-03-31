@@ -15,8 +15,15 @@
         <releaseNotes>Initial release.</releaseNotes>
         <copyright>Copyright 2015</copyright>
         <tags>nservicebus entityframework persisters bus servicebus persistence</tags>
+        <dependencies>
+            <dependency id="EntityFramework"
+                        version="[6.1.3,7.0)" />
+            <dependency id="NServiceBus"
+                        version="[5.2.0,6.0.0)" />
+        </dependencies>
     </metadata>
-    <dependencies>
-        
-    </dependencies>
+    <files>
+        <file src="..\..\binaries\GoodlyFere.NServiceBus.EntityFramework.???"
+              target="lib\net45" />
+    </files>
 </package>

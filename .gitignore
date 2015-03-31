@@ -175,3 +175,4 @@ FakesAssemblies/
 # packaging
 chocos/
 nugets/
+binaries/
