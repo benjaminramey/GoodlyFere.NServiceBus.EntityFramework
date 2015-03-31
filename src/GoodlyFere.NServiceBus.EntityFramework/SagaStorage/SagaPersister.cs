@@ -1,29 +1,24 @@
 #region License
 
-// ------------------------------------------------------------------------------------------------------------------
-//  <copyright file="EFSagaPersister.cs">
-//  GoodlyFere.NServiceBus.EntityFramework
-//  
-//  Copyright (C) 2014 
-//  
-//  This library is free software; you can redistribute it and/or
-//  modify it under the terms of the GNU Lesser General Public
-//  License as published by the Free Software Foundation; either
-//  version 2.1 of the License, or (at your option) any later version.
-//  This library is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//  Lesser General Public License for more details.
-//  
-//  You should have received a copy of the GNU Lesser General Public
-//  License along with this library; if not, write to the Free Software
-//  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-//  
-//  http://www.gnu.org/licenses/lgpl-2.1-standalone.html
-//  
-//  You can contact me at ben.ramey@gmail.com.
-//  </copyright>
-//  --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="SagaPersister.cs">
+//  Copyright 2015 Benjamin S. Ramey
+// 
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+// </copyright>
+// <created>03/25/2015 9:51 AM</created>
+// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// --------------------------------------------------------------------------------------------------------------------
 
 #endregion
 
@@ -36,6 +31,7 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
+using GoodlyFere.NServiceBus.EntityFramework.Support;
 using NServiceBus.Saga;
 
 #endregion
@@ -58,7 +54,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            saga.Id = Support.CombGuid.NewGuid();
+            saga.Id = CombGuid.NewGuid();
 
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
