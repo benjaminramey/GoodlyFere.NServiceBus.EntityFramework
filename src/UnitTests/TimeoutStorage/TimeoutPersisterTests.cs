@@ -80,7 +80,7 @@ namespace UnitTests.TimeoutStorage
             DateTime nextTimeToRun;
             var result = _persister.GetNextChunk(DateTime.UtcNow.AddDays(-5), out nextTimeToRun);
             
-            nextTimeToRun.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(10));
+            nextTimeToRun.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(10), 1000);
         }
 
         [Fact]
@@ -118,7 +118,19 @@ namespace UnitTests.TimeoutStorage
             var result = _persister.TryRemove(timeout.Id.ToString(), out data);
 
             result.Should().BeTrue();
-            _dbContext.Timeouts.Find(timeout.Id).Should().BeNull();
+
+            var dbc = new TestDbContext();
+            dbc.Timeouts.Find(timeout.Id).Should().BeNull();
+        }
+
+        [Fact]
+        public void TryRemove_NonExistentId_ReturnsFalseOutIsNull()
+        {
+            TimeoutData data;
+            var result = _persister.TryRemove(Guid.NewGuid().ToString(), out data);
+
+            result.Should().BeFalse();
+            data.Should().BeNull();
         }
 
         [Fact]
