@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/26/2015 12:17 PM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -38,17 +38,10 @@ namespace UnitTests
     public class EntityFrameworkPersistenceTests
     {
         [Fact]
-        public void SupportsTimeouts()
+        public void DoesNotSupportOutbox()
         {
             var obj = new EntityFrameworkPersistence();
-            obj.HasSupportFor<StorageType.Timeouts>().Should().BeTrue();
-        }
-
-        [Fact]
-        public void SupportsSubscriptions()
-        {
-            var obj = new EntityFrameworkPersistence();
-            obj.HasSupportFor<StorageType.Subscriptions>().Should().BeTrue();
+            obj.HasSupportFor<StorageType.Outbox>().Should().BeFalse();
         }
 
         [Fact]
@@ -59,10 +52,17 @@ namespace UnitTests
         }
 
         [Fact]
-        public void DoesNotSupportOutbox()
+        public void SupportsSubscriptions()
         {
             var obj = new EntityFrameworkPersistence();
-            obj.HasSupportFor<StorageType.Outbox>().Should().BeFalse();
+            obj.HasSupportFor<StorageType.Subscriptions>().Should().BeTrue();
+        }
+
+        [Fact]
+        public void SupportsTimeouts()
+        {
+            var obj = new EntityFrameworkPersistence();
+            obj.HasSupportFor<StorageType.Timeouts>().Should().BeTrue();
         }
     }
 }

@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/30/2015 4:25 PM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -64,9 +64,9 @@ namespace UnitTests
     {
         public string SomeProp1 { get; set; }
         public string SomeProp2 { get; set; }
-        public string Originator { get; set; }
-        public string OriginalMessageId { get; set; }
         public Guid Id { get; set; }
+        public string OriginalMessageId { get; set; }
+        public string Originator { get; set; }
     }
 
     internal class TestMessage : IMessage

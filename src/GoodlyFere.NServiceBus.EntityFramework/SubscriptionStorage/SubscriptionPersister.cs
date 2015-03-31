@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/25/2015 7:55 PM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -44,6 +44,50 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
         public SubscriptionPersister(INServiceBusDbContextFactory dbContextFactory)
         {
             _dbContextFactory = dbContextFactory;
+        }
+
+        public IEnumerable<Address> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes)
+        {
+            if (messageTypes == null)
+            {
+                throw new ArgumentNullException("messageTypes");
+            }
+
+            MessageType[] mtArray = messageTypes as MessageType[] ?? messageTypes.ToArray();
+            if (!mtArray.Any())
+            {
+                return new List<Address>();
+            }
+
+            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
+            {
+                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    try
+                    {
+                        var messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
+                        var subscriptions = dbc.Subscriptions
+                            .Where(s => messageTypeStrings.Contains(s.MessageType))
+                            .ToList();
+
+                        transaction.Commit();
+
+                        return subscriptions
+                            .Select(s => Address.Parse(s.SubscriberEndpoint))
+                            .Distinct()
+                            .ToList();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void Init()
+        {
         }
 
         public void Subscribe(Address client, IEnumerable<MessageType> messageTypes)
@@ -145,50 +189,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     }
                 }
             }
-        }
-
-        public IEnumerable<Address> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes)
-        {
-            if (messageTypes == null)
-            {
-                throw new ArgumentNullException("messageTypes");
-            }
-
-            MessageType[] mtArray = messageTypes as MessageType[] ?? messageTypes.ToArray();
-            if (!mtArray.Any())
-            {
-                return new List<Address>();
-            }
-
-            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
-            {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    try
-                    {
-                        var messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
-                        var subscriptions = dbc.Subscriptions
-                            .Where(s => messageTypeStrings.Contains(s.MessageType))
-                            .ToList();
-
-                        transaction.Commit();
-
-                        return subscriptions
-                            .Select(s => Address.Parse(s.SubscriberEndpoint))
-                            .Distinct()
-                            .ToList();
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
-                }
-            }
-        }
-
-        public void Init()
-        {
         }
     }
 }

@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/25/2015 9:51 AM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -47,27 +47,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             _dbContextFactory = dbContextFactory;
         }
 
-        public void Save(IContainSagaData saga)
-        {
-            if (saga == null)
-            {
-                throw new ArgumentNullException("saga");
-            }
-
-            saga.Id = CombGuid.NewGuid();
-
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
-            {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    dbc.SagaSet(saga.GetType()).Add(saga);
-                    dbc.SaveChanges();
-                    transaction.Commit();
-                }
-            }
-        }
-
-        public void Update(IContainSagaData saga)
+        public void Complete(IContainSagaData saga)
         {
             if (saga == null)
             {
@@ -78,17 +58,31 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
-                    if (existingEnt == null)
+                    try
                     {
-                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                    }
+                        DbEntityEntry entry = dbc.Entry(saga);
+                        DbSet set = dbc.SagaSet(saga.GetType());
 
-                    var entry = dbc.Entry(existingEnt);
-                    entry.CurrentValues.SetValues(saga);
-                    entry.State = EntityState.Modified;
-                    dbc.SaveChanges();
-                    transaction.Commit();
+                        if (entry.State == EntityState.Detached)
+                        {
+                            set.Attach(saga);
+                        }
+
+                        set.Remove(saga);
+
+                        dbc.SaveChanges();
+                        transaction.Commit();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        transaction.Rollback();
+                        // don't do anything, if we couldn't delete because it doesn't exist, that's OK
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }
@@ -145,7 +139,27 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             }
         }
 
-        public void Complete(IContainSagaData saga)
+        public void Save(IContainSagaData saga)
+        {
+            if (saga == null)
+            {
+                throw new ArgumentNullException("saga");
+            }
+
+            saga.Id = CombGuid.NewGuid();
+
+            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            {
+                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    dbc.SagaSet(saga.GetType()).Add(saga);
+                    dbc.SaveChanges();
+                    transaction.Commit();
+                }
+            }
+        }
+
+        public void Update(IContainSagaData saga)
         {
             if (saga == null)
             {
@@ -156,31 +170,17 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    try
+                    object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
+                    if (existingEnt == null)
                     {
-                        DbEntityEntry entry = dbc.Entry(saga);
-                        DbSet set = dbc.SagaSet(saga.GetType());
-
-                        if (entry.State == EntityState.Detached)
-                        {
-                            set.Attach(saga);
-                        }
-
-                        set.Remove(saga);
-
-                        dbc.SaveChanges();
-                        transaction.Commit();
+                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
                     }
-                    catch (DbUpdateConcurrencyException)
-                    {
-                        transaction.Rollback();
-                        // don't do anything, if we couldn't delete because it doesn't exist, that's OK
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+
+                    var entry = dbc.Entry(existingEnt);
+                    entry.CurrentValues.SetValues(saga);
+                    entry.State = EntityState.Modified;
+                    dbc.SaveChanges();
+                    transaction.Commit();
                 }
             }
         }

@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/26/2015 1:35 PM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -39,17 +39,17 @@ namespace UnitTests.Support
     public class SerializeHelperTests
     {
         [Fact]
-        public void ToDictionary_Null_ReturnsNewDictionary()
+        public void ToDictionary_Empty_ReturnsNewDictionary()
         {
-            var result = SerializeHelper.ToDictionary(null);
+            var result = SerializeHelper.ToDictionary(string.Empty);
 
             result.Should().NotBeNull();
         }
 
         [Fact]
-        public void ToDictionary_Empty_ReturnsNewDictionary()
+        public void ToDictionary_Null_ReturnsNewDictionary()
         {
-            var result = SerializeHelper.ToDictionary(string.Empty);
+            var result = SerializeHelper.ToDictionary(null);
 
             result.Should().NotBeNull();
         }
@@ -71,6 +71,22 @@ namespace UnitTests.Support
         }
 
         [Fact]
+        public void ToDictionaryString_Empty_ReturnsNull()
+        {
+            var result = SerializeHelper.ToDictionaryString(new Dictionary<string, string>());
+
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public void ToDictionaryString_Null_ReturnsNull()
+        {
+            var result = SerializeHelper.ToDictionaryString(null);
+
+            result.Should().BeNull();
+        }
+
+        [Fact]
         public void ToDictionaryString_Valid_ReturnsSerializedString()
         {
             Dictionary<string, string> expected = new Dictionary<string, string>
@@ -84,22 +100,6 @@ namespace UnitTests.Support
             var result = SerializeHelper.ToDictionaryString(expected);
 
             result.ShouldBeEquivalentTo(expectedStr);
-        }
-
-        [Fact]
-        public void ToDictionaryString_Null_ReturnsNull()
-        {
-            var result = SerializeHelper.ToDictionaryString(null);
-
-            result.Should().BeNull();
-        }
-
-        [Fact]
-        public void ToDictionaryString_Empty_ReturnsNull()
-        {
-            var result = SerializeHelper.ToDictionaryString(new Dictionary<string, string>());
-
-            result.Should().BeNull();
         }
     }
 }

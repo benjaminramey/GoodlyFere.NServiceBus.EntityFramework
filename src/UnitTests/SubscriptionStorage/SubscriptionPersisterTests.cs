@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/30/2015 2:46 PM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:56 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -66,35 +66,50 @@ namespace UnitTests.SubscriptionStorage
             }
         }
 
-        //subscribe, null address, throws
         [Fact]
-        public void Subscribe_NullClient_Throws()
+        public void GetSubscriberAddressesForMessage_EmptyMessages_ReturnsEmpty()
         {
-            _persister.Invoking(p => p.Subscribe(null, new List<MessageType>()))
-                .ShouldThrow<ArgumentNullException>();
+            var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
+
+            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+            result.Should().NotBeNull();
+            result.Count().Should().Be(0);
         }
 
-        //subscribe, null message types, throws
         [Fact]
-        public void Subscribe_NullMessageTypes_Throws()
+        public void GetSubscriberAddressesForMessage_GetsUniqueAddressesForMessages()
         {
-            _persister.Invoking(p => p.Subscribe(new Address("queue", "machine"), null))
-                .ShouldThrow<ArgumentNullException>();
+            AddSubscriptions();
+            string mtString = new MessageType(typeof(TestMessage)).ToString();
+            string mtString2 = new MessageType(typeof(TestMessage2)).ToString();
+            int expectedCount = _dbContext.Subscriptions
+                .Where(
+                    s =>
+                        s.MessageType == mtString
+                        || s.MessageType == mtString2)
+                .Select(s => s.SubscriberEndpoint)
+                .Distinct()
+                .Count();
+
+            var result = _persister.GetSubscriberAddressesForMessage(
+                new List<MessageType>
+                {
+                    new MessageType(typeof(TestMessage)),
+                    new MessageType(typeof(TestMessage2))
+                });
+
+            result.Count().Should().BeGreaterThan(0);
+            result.Count().Should().Be(expectedCount);
+            result.Distinct().Count().Should().Be(result.Count());
         }
 
-        //subscribe, empty messages, saves nothing
         [Fact]
-        public void Subscribe_EmptyMessageTypes_SavesNothing()
+        public void GetSubscriberAddressesForMessage_NullMessages_Throws()
         {
-            int expectedCount = _dbContext.Subscriptions.Count();
+            _persister.Invoking(p => p.GetSubscriberAddressesForMessage(null))
+                .ShouldThrow<ArgumentNullException>();
 
-            _persister.Subscribe(
-                new Address("queue", "machine"),
-                new List<MessageType>());
-
-            int actualCount = _dbContext.Subscriptions.ToList().Count;
-
-            actualCount.Should().Be(expectedCount);
+            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
         }
 
         // subscribe, duplicate message types, saves unique records
@@ -115,6 +130,37 @@ namespace UnitTests.SubscriptionStorage
 
             actualEntities.Count.Should().Be(2);
             actualEntities.Select(e => e.MessageType).Distinct().Count().Should().Be(2);
+        }
+
+        //subscribe, empty messages, saves nothing
+        [Fact]
+        public void Subscribe_EmptyMessageTypes_SavesNothing()
+        {
+            int expectedCount = _dbContext.Subscriptions.Count();
+
+            _persister.Subscribe(
+                new Address("queue", "machine"),
+                new List<MessageType>());
+
+            int actualCount = _dbContext.Subscriptions.ToList().Count;
+
+            actualCount.Should().Be(expectedCount);
+        }
+
+        //subscribe, null address, throws
+        [Fact]
+        public void Subscribe_NullClient_Throws()
+        {
+            _persister.Invoking(p => p.Subscribe(null, new List<MessageType>()))
+                .ShouldThrow<ArgumentNullException>();
+        }
+
+        //subscribe, null message types, throws
+        [Fact]
+        public void Subscribe_NullMessageTypes_Throws()
+        {
+            _persister.Invoking(p => p.Subscribe(new Address("queue", "machine"), null))
+                .ShouldThrow<ArgumentNullException>();
         }
 
         //unsubscribe, null client, throws
@@ -156,52 +202,6 @@ namespace UnitTests.SubscriptionStorage
                 s => s.SubscriberEndpoint == "queue@machine"
                      && s.MessageType == messageType)
                 .Should().Be(0);
-        }
-
-        [Fact]
-        public void GetSubscriberAddressesForMessage_GetsUniqueAddressesForMessages()
-        {
-            AddSubscriptions();
-            string mtString = new MessageType(typeof(TestMessage)).ToString();
-            string mtString2 = new MessageType(typeof(TestMessage2)).ToString();
-            int expectedCount = _dbContext.Subscriptions
-                .Where(
-                    s =>
-                        s.MessageType == mtString
-                        || s.MessageType == mtString2)
-                .Select(s => s.SubscriberEndpoint)
-                .Distinct()
-                .Count();
-
-            var result = _persister.GetSubscriberAddressesForMessage(
-                new List<MessageType>
-                {
-                    new MessageType(typeof(TestMessage)),
-                    new MessageType(typeof(TestMessage2))
-                });
-
-            result.Count().Should().BeGreaterThan(0);
-            result.Count().Should().Be(expectedCount);
-            result.Distinct().Count().Should().Be(result.Count());
-        }
-
-        [Fact]
-        public void GetSubscriberAddressesForMessage_NullMessages_Throws()
-        {
-            _persister.Invoking(p => p.GetSubscriberAddressesForMessage(null))
-                .ShouldThrow<ArgumentNullException>();
-
-            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
-        }
-
-        [Fact]
-        public void GetSubscriberAddressesForMessage_EmptyMessages_ReturnsEmpty()
-        {
-            var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
-
-            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
-            result.Should().NotBeNull();
-            result.Count().Should().Be(0);
         }
 
         private void AddSubscriptions()

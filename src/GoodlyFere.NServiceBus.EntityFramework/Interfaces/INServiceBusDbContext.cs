@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/26/2015 9:35 AM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -37,14 +37,14 @@ namespace GoodlyFere.NServiceBus.EntityFramework.Interfaces
     {
         Database Database { get; }
 
+        DbEntityEntry Entry(object entity);
+
+        DbEntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
+
         int SaveChanges();
 
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
 
         DbSet Set(Type entityType);
-
-        DbEntityEntry Entry(object entity);
-
-        DbEntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
     }
 }

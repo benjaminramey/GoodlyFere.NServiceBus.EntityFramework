@@ -17,7 +17,7 @@
 //  limitations under the License.
 // </copyright>
 // <created>03/31/2015 9:38 AM</created>
-// <updated>03/31/2015 12:50 PM by Ben Ramey</updated>
+// <updated>03/31/2015 12:55 PM by Ben Ramey</updated>
 // --------------------------------------------------------------------------------------------------------------------
 
 #endregion
@@ -133,21 +133,6 @@ namespace UnitTests.TimeoutStorage
         }
 
         [Fact]
-        public void TryRemove_Removes()
-        {
-            AddTimeouts();
-            var timeout = _dbContext.Timeouts.First();
-
-            TimeoutData data;
-            var result = _persister.TryRemove(timeout.Id.ToString(), out data);
-
-            result.Should().BeTrue();
-
-            var dbc = new TestDbContext();
-            dbc.Timeouts.Find(timeout.Id).Should().BeNull();
-        }
-
-        [Fact]
         public void TryRemove_NonExistentId_ReturnsFalseOutIsNull()
         {
             TimeoutData data;
@@ -167,6 +152,21 @@ namespace UnitTests.TimeoutStorage
             var result = _persister.TryRemove(timeout.Id.ToString(), out data);
 
             data.Id.Should().Be(timeout.Id.ToString());
+        }
+
+        [Fact]
+        public void TryRemove_Removes()
+        {
+            AddTimeouts();
+            var timeout = _dbContext.Timeouts.First();
+
+            TimeoutData data;
+            var result = _persister.TryRemove(timeout.Id.ToString(), out data);
+
+            result.Should().BeTrue();
+
+            var dbc = new TestDbContext();
+            dbc.Timeouts.Find(timeout.Id).Should().BeNull();
         }
 
         private void AddTimeouts()
