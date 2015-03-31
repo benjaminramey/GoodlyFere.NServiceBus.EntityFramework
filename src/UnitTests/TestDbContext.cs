@@ -5,6 +5,7 @@ using System.Data.Entity;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
+using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus;
 using NServiceBus.Saga;
 
@@ -12,7 +13,7 @@ using NServiceBus.Saga;
 
 namespace UnitTests
 {
-    internal class TestDbContext : DbContext, ISagaDbContext, ISubscriptionDbContext
+    internal class TestDbContext : DbContext, ISagaDbContext, ISubscriptionDbContext, ITimeoutDbContext
     {
         public TestDbContext()
             : base("testdb")
@@ -32,6 +33,7 @@ namespace UnitTests
         }
 
         public DbSet<SubscriptionEntity> Subscriptions { get; set; }
+        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
 
     public class TestSagaData : IContainSagaData

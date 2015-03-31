@@ -90,6 +90,7 @@
     <Compile Include="TestDbContext.cs" />
     <Compile Include="Support\CombGuidTests.cs" />
     <Compile Include="Support\SerializeHelperTests.cs" />
+    <Compile Include="TimeoutStorage\TimeoutPersisterTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -101,9 +102,7 @@
       <Name>GoodlyFere.NServiceBus.EntityFramework</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="TimeoutStorage\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

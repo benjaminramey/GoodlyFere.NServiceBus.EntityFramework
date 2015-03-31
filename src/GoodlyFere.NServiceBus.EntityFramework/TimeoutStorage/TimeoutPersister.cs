@@ -31,6 +31,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         public void Add(TimeoutData timeout)
         {
+            if (timeout == null)
+            {
+                throw new ArgumentNullException("timeout");
+            }
+
             Guid timeoutId = CombGuid.NewGuid();
             TimeoutDataEntity timeoutEntity = new TimeoutDataEntity
             {
@@ -96,6 +101,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         public void RemoveTimeoutBy(Guid sagaId)
         {
+            if (sagaId == Guid.Empty)
+            {
+                throw new ArgumentException("sagaId parameter cannot be empty.", "sagaId");
+            }
+
             using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
