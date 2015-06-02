@@ -56,33 +56,23 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                try
                 {
-                    try
-                    {
-                        DbEntityEntry entry = dbc.Entry(saga);
-                        DbSet set = dbc.SagaSet(saga.GetType());
+                    DbEntityEntry entry = dbc.Entry(saga);
+                    DbSet set = dbc.SagaSet(saga.GetType());
 
-                        if (entry.State == EntityState.Detached)
-                        {
-                            set.Attach(saga);
-                        }
-
-                        set.Remove(saga);
-
-                        dbc.SaveChanges();
-                        transaction.Commit();
-                    }
-                    catch (DbUpdateConcurrencyException)
+                    if (entry.State == EntityState.Detached)
                     {
-                        transaction.Rollback();
-                        // don't do anything, if we couldn't delete because it doesn't exist, that's OK
+                        set.Attach(saga);
                     }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+
+                    set.Remove(saga);
+
+                    dbc.SaveChanges();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // don't do anything, if we couldn't delete because it doesn't exist, that's OK
                 }
             }
         }
@@ -150,12 +140,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    dbc.SagaSet(saga.GetType()).Add(saga);
-                    dbc.SaveChanges();
-                    transaction.Commit();
-                }
+                dbc.SagaSet(saga.GetType()).Add(saga);
+                dbc.SaveChanges();
             }
         }
 
@@ -168,20 +154,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
+                if (existingEnt == null)
                 {
-                    object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
-                    if (existingEnt == null)
-                    {
-                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                    }
-
-                    var entry = dbc.Entry(existingEnt);
-                    entry.CurrentValues.SetValues(saga);
-                    entry.State = EntityState.Modified;
-                    dbc.SaveChanges();
-                    transaction.Commit();
+                    throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
                 }
+
+                var entry = dbc.Entry(existingEnt);
+                entry.CurrentValues.SetValues(saga);
+                entry.State = EntityState.Modified;
+                dbc.SaveChanges();
             }
         }
     }
