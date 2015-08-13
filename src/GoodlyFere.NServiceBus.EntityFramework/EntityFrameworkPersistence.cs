@@ -31,6 +31,7 @@ using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus.Features;
 using NServiceBus.Persistence;
+using NServiceBus.Settings;
 
 #endregion
 
@@ -46,9 +47,24 @@ namespace GoodlyFere.NServiceBus.EntityFramework
         /// </summary>
         public EntityFrameworkPersistence()
         {
-            Supports<StorageType.Timeouts>(s => s.EnableFeatureByDefault<EntityFrameworkTimeoutStorage>());
-            Supports<StorageType.Subscriptions>(s => s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorage>());
-            Supports<StorageType.Sagas>(s => s.EnableFeatureByDefault<EntityFrameworkSagaStorage>());
+            Supports<StorageType.Timeouts>(SetupTimeoutSettings);
+            Supports<StorageType.Subscriptions>(SetupSubscriptionSettings);
+            Supports<StorageType.Sagas>(SetupSagasSettings);
+        }
+
+        private void SetupSagasSettings(SettingsHolder s)
+        {
+            s.EnableFeatureByDefault<EntityFrameworkSagaStorage>();
+        }
+
+        private void SetupSubscriptionSettings(SettingsHolder s)
+        {
+            s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorage>();
+        }
+
+        private void SetupTimeoutSettings(SettingsHolder s)
+        {
+            s.EnableFeatureByDefault<EntityFrameworkTimeoutStorage>();
         }
     }
 }

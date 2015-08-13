@@ -136,8 +136,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            saga.Id = CombGuid.NewGuid();
-
             using (var dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 dbc.SagaSet(saga.GetType()).Add(saga);
