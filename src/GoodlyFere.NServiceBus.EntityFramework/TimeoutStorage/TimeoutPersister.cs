@@ -74,20 +74,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
             using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    try
-                    {
-                        dbc.Timeouts.Add(timeoutEntity);
-                        dbc.SaveChanges();
-                        transaction.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
-                }
+                dbc.Timeouts.Add(timeoutEntity);
+                dbc.SaveChanges();
             }
         }
 
@@ -132,14 +120,10 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
             using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var toDelete = dbc.Timeouts.Where(t => t.SagaId == sagaId);
-                    dbc.Timeouts.RemoveRange(toDelete);
+                var toDelete = dbc.Timeouts.Where(t => t.SagaId == sagaId);
+                dbc.Timeouts.RemoveRange(toDelete);
 
-                    dbc.SaveChanges();
-                    transaction.Commit();
-                }
+                dbc.SaveChanges();
             }
         }
 
@@ -147,33 +131,29 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
         {
             using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));
+
+                if (entity == null)
                 {
-                    TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));
-
-                    if (entity == null)
-                    {
-                        timeoutData = null;
-                        return false;
-                    }
-
-                    timeoutData = new TimeoutData
-                    {
-                        Destination = Address.Parse(entity.Destination),
-                        Headers = entity.Headers.ToDictionary(),
-                        Id = entity.Id.ToString(),
-                        OwningTimeoutManager = entity.Endpoint,
-                        SagaId = entity.SagaId,
-                        State = entity.State,
-                        Time = entity.Time
-                    };
-
-                    dbc.Timeouts.Remove(entity);
-                    dbc.SaveChanges();
-                    transaction.Commit();
-
-                    return true;
+                    timeoutData = null;
+                    return false;
                 }
+
+                timeoutData = new TimeoutData
+                {
+                    Destination = Address.Parse(entity.Destination),
+                    Headers = entity.Headers.ToDictionary(),
+                    Id = entity.Id.ToString(),
+                    OwningTimeoutManager = entity.Endpoint,
+                    SagaId = entity.SagaId,
+                    State = entity.State,
+                    Time = entity.Time
+                };
+
+                dbc.Timeouts.Remove(entity);
+                dbc.SaveChanges();
+
+                return true;
             }
         }
     }

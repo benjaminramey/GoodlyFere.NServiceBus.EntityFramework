@@ -25,6 +25,7 @@
 #region Usings
 
 using System;
+using System.Collections;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
@@ -54,35 +55,25 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                try
                 {
-                    try
-                    {
-                        DbEntityEntry entry = dbc.Entry(saga);
-                        DbSet set = dbc.SagaSet(saga.GetType());
+                    DbEntityEntry entry = dbc.Entry(saga);
+                    DbSet set = dbc.SagaSet(saga.GetType());
 
-                        if (entry.State == EntityState.Detached)
-                        {
-                            set.Attach(saga);
-                        }
-
-                        set.Remove(saga);
-
-                        dbc.SaveChanges();
-                        transaction.Commit();
-                    }
-                    catch (DbUpdateConcurrencyException)
+                    if (entry.State == EntityState.Detached)
                     {
-                        transaction.Rollback();
-                        // don't do anything, if we couldn't delete because it doesn't exist, that's OK
+                        set.Attach(saga);
                     }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+
+                    set.Remove(saga);
+
+                    dbc.SaveChanges();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // don't do anything, if we couldn't delete because it doesn't exist, that's OK
                 }
             }
         }
@@ -94,7 +85,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 object result = dbc.SagaSet(typeof(TSagaData)).Find(sagaId);
                 return (TSagaData)(result ?? default(TSagaData));
@@ -116,7 +107,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 IQueryable setQueryable = dbc.SagaSet(typeof(TSagaData)).AsQueryable();
                 IQueryable result = setQueryable
@@ -129,7 +120,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                             setQueryable.Expression,
                             Expression.Quote(filter)));
 
-                var enumerator = result.GetEnumerator();
+                IEnumerator enumerator = result.GetEnumerator();
                 if (enumerator.MoveNext())
                 {
                     return (TSagaData)enumerator.Current;
@@ -146,16 +137,10 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            saga.Id = CombGuid.NewGuid();
-
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    dbc.SagaSet(saga.GetType()).Add(saga);
-                    dbc.SaveChanges();
-                    transaction.Commit();
-                }
+                dbc.SagaSet(saga.GetType()).Add(saga);
+                dbc.SaveChanges();
             }
         }
 
@@ -166,21 +151,30 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                using (var transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
+                using (DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable))
                 {
-                    object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
-                    if (existingEnt == null)
+                    try
                     {
-                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                    }
+                        object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
+                        if (existingEnt == null)
+                        {
+                            throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                        }
 
-                    var entry = dbc.Entry(existingEnt);
-                    entry.CurrentValues.SetValues(saga);
-                    entry.State = EntityState.Modified;
-                    dbc.SaveChanges();
-                    transaction.Commit();
+                        DbEntityEntry entry = dbc.Entry(existingEnt);
+                        entry.CurrentValues.SetValues(saga);
+                        entry.State = EntityState.Modified;
+                        dbc.SaveChanges();
+
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }
