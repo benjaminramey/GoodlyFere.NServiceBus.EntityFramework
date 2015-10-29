@@ -153,16 +153,29 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
-                object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
-                if (existingEnt == null)
+                using (DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable))
                 {
-                    throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                }
+                    try
+                    {
+                        object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
+                        if (existingEnt == null)
+                        {
+                            throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                        }
 
-                var entry = dbc.Entry(existingEnt);
-                entry.CurrentValues.SetValues(saga);
-                entry.State = EntityState.Modified;
-                dbc.SaveChanges();
+                        DbEntityEntry entry = dbc.Entry(existingEnt);
+                        entry.CurrentValues.SetValues(saga);
+                        entry.State = EntityState.Modified;
+                        dbc.SaveChanges();
+
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
     }
