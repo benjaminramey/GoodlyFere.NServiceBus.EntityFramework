@@ -25,6 +25,7 @@
 #region Usings
 
 using System;
+using System.Collections;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
@@ -54,7 +55,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 try
                 {
@@ -84,7 +85,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 object result = dbc.SagaSet(typeof(TSagaData)).Find(sagaId);
                 return (TSagaData)(result ?? default(TSagaData));
@@ -106,7 +107,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 IQueryable setQueryable = dbc.SagaSet(typeof(TSagaData)).AsQueryable();
                 IQueryable result = setQueryable
@@ -119,7 +120,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                             setQueryable.Expression,
                             Expression.Quote(filter)));
 
-                var enumerator = result.GetEnumerator();
+                IEnumerator enumerator = result.GetEnumerator();
                 if (enumerator.MoveNext())
                 {
                     return (TSagaData)enumerator.Current;
@@ -136,7 +137,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 dbc.SagaSet(saga.GetType()).Add(saga);
                 dbc.SaveChanges();
@@ -150,7 +151,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (var dbc = _dbContextFactory.CreateSagaDbContext())
+            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
             {
                 object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
                 if (existingEnt == null)
