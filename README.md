@@ -88,5 +88,9 @@ determines which DbSet to return when asked.
 
 Notice that the `SubscriptionEntity` and `TimeoutDataEntity` classes are defined in this library.
 
+### Registration
+You must then register your implementation of `INServiceBusDbContextFactory` with the dependency injection
+framework that you have configured for NServiceBus.
+
 ## Version History
  - 1.0: Initial release to NuGet.  Stable use in production for timeout, subscription and saga data storage.
