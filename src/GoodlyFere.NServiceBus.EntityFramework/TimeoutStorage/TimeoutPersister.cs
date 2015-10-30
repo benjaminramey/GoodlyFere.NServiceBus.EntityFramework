@@ -30,6 +30,7 @@ using System.Data;
 using GoodlyFere.NServiceBus.EntityFramework.Support;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus;
 using NServiceBus.Timeout.Core;
 
@@ -39,16 +40,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 {
     public class TimeoutPersister : IPersistTimeouts
     {
-        private readonly INServiceBusDbContextFactory _dbContextFactory;
+        private readonly ITimeoutDbContext _dbContext;
 
-        public TimeoutPersister(INServiceBusDbContextFactory dbContextFactory)
+        public TimeoutPersister(IDbContextProvider dbContextProvider)
         {
-            if (dbContextFactory == null)
+            if (dbContextProvider == null)
             {
-                throw new ArgumentNullException("dbContextFactory");
+                throw new ArgumentNullException("dbContextProvider");
             }
 
-            _dbContextFactory = dbContextFactory;
+            _dbContext = dbContextProvider.GetTimeoutDbContext();
         }
 
         public string EndpointName { get; set; }
@@ -72,43 +73,37 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                 Time = timeout.Time
             };
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
-            {
-                dbc.Timeouts.Add(timeoutEntity);
-                dbc.SaveChanges();
-            }
+            _dbContext.Timeouts.Add(timeoutEntity);
+            _dbContext.SaveChanges();
         }
 
         public IEnumerable<Tuple<string, DateTime>> GetNextChunk(DateTime startSlice, out DateTime nextTimeToRunQuery)
         {
             DateTime now = DateTime.UtcNow;
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
-            {
-                List<TimeoutDataEntity> matchingTimeouts = dbc.Timeouts
-                    .Where(
-                        t => t.Endpoint == EndpointName
-                             && t.Time >= startSlice
-                             && t.Time <= now)
-                    .OrderBy(t => t.Time)
-                    .ToList();
+            List<TimeoutDataEntity> matchingTimeouts = _dbContext.Timeouts
+                .Where(
+                    t => t.Endpoint == EndpointName
+                         && t.Time >= startSlice
+                         && t.Time <= now)
+                .OrderBy(t => t.Time)
+                .ToList();
 
-                List<Tuple<string, DateTime>> chunks = matchingTimeouts
-                    .Select(t => new Tuple<string, DateTime>(t.Id.ToString(), t.Time))
-                    .ToList();
+            List<Tuple<string, DateTime>> chunks = matchingTimeouts
+                .Select(t => new Tuple<string, DateTime>(t.Id.ToString(), t.Time))
+                .ToList();
 
-                TimeoutDataEntity startOfNextChunk = dbc.Timeouts
-                    .Where(t => t.Endpoint == EndpointName && t.Time > now)
-                    .OrderBy(t => t.Time)
-                    .Take(1)
-                    .SingleOrDefault();
+            TimeoutDataEntity startOfNextChunk = _dbContext.Timeouts
+                .Where(t => t.Endpoint == EndpointName && t.Time > now)
+                .OrderBy(t => t.Time)
+                .Take(1)
+                .SingleOrDefault();
 
-                nextTimeToRunQuery = startOfNextChunk != null
-                    ? startOfNextChunk.Time
-                    : DateTime.UtcNow.AddMinutes(10);
+            nextTimeToRunQuery = startOfNextChunk != null
+                ? startOfNextChunk.Time
+                : DateTime.UtcNow.AddMinutes(10);
 
-                return chunks;
-            }
+            return chunks;
         }
 
         public void RemoveTimeoutBy(Guid sagaId)
@@ -118,43 +113,37 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                 throw new ArgumentException("sagaId parameter cannot be empty.", "sagaId");
             }
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
-            {
-                var toDelete = dbc.Timeouts.Where(t => t.SagaId == sagaId);
-                dbc.Timeouts.RemoveRange(toDelete);
+            var toDelete = _dbContext.Timeouts.Where(t => t.SagaId == sagaId);
+            _dbContext.Timeouts.RemoveRange(toDelete);
 
-                dbc.SaveChanges();
-            }
+            _dbContext.SaveChanges();
         }
 
         public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
         {
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
+            TimeoutDataEntity entity = _dbContext.Timeouts.Find(Guid.Parse(timeoutId));
+
+            if (entity == null)
             {
-                TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));
-
-                if (entity == null)
-                {
-                    timeoutData = null;
-                    return false;
-                }
-
-                timeoutData = new TimeoutData
-                {
-                    Destination = Address.Parse(entity.Destination),
-                    Headers = entity.Headers.ToDictionary(),
-                    Id = entity.Id.ToString(),
-                    OwningTimeoutManager = entity.Endpoint,
-                    SagaId = entity.SagaId,
-                    State = entity.State,
-                    Time = entity.Time
-                };
-
-                dbc.Timeouts.Remove(entity);
-                dbc.SaveChanges();
-
-                return true;
+                timeoutData = null;
+                return false;
             }
+
+            timeoutData = new TimeoutData
+            {
+                Destination = Address.Parse(entity.Destination),
+                Headers = entity.Headers.ToDictionary(),
+                Id = entity.Id.ToString(),
+                OwningTimeoutManager = entity.Endpoint,
+                SagaId = entity.SagaId,
+                State = entity.State,
+                Time = entity.Time
+            };
+
+            _dbContext.Timeouts.Remove(entity);
+            _dbContext.SaveChanges();
+
+            return true;
         }
     }
 }

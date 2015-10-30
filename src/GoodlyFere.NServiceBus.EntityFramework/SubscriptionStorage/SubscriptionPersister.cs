@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
@@ -39,11 +40,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 {
     public class SubscriptionPersister : ISubscriptionStorage
     {
-        private readonly INServiceBusDbContextFactory _dbContextFactory;
+        private readonly ISubscriptionDbContext _dbContext;
 
-        public SubscriptionPersister(INServiceBusDbContextFactory dbContextFactory)
+        public SubscriptionPersister(IDbContextProvider dbContextProvider)
         {
-            _dbContextFactory = dbContextFactory;
+            if (dbContextProvider == null)
+            {
+                throw new ArgumentNullException("dbContextProvider");
+            }
+
+            _dbContext = dbContextProvider.GetSubscriptionDbContext();
         }
 
         public IEnumerable<Address> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes)
@@ -58,19 +64,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
             {
                 return new List<Address>();
             }
+            var messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
+            var subscriptions = _dbContext.Subscriptions
+                .Where(s => messageTypeStrings.Contains(s.MessageType))
+                .ToList();
 
-            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
-            {
-                var messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
-                var subscriptions = dbc.Subscriptions
-                    .Where(s => messageTypeStrings.Contains(s.MessageType))
-                    .ToList();
-                
-                return subscriptions
-                    .Select(s => Address.Parse(s.SubscriberEndpoint))
-                    .Distinct()
-                    .ToList();
-            }
+            return subscriptions
+                .Select(s => Address.Parse(s.SubscriberEndpoint))
+                .Distinct()
+                .ToList();
         }
 
         public void Init()
@@ -106,24 +108,21 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     });
             }
 
-            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
+            var existing = _dbContext.Subscriptions.Where(
+                s => s.SubscriberEndpoint == clientAddress
+                     && messageTypeStrings.Contains(s.MessageType));
+
+            foreach (var subscription in subscriptions)
             {
-                var existing = dbc.Subscriptions.Where(
-                    s => s.SubscriberEndpoint == clientAddress
-                         && messageTypeStrings.Contains(s.MessageType));
-
-                foreach (var subscription in subscriptions)
+                if (existing.Any(s => s.MessageType == subscription.MessageType))
                 {
-                    if (existing.Any(s => s.MessageType == subscription.MessageType))
-                    {
-                        return;
-                    }
-
-                    dbc.Subscriptions.Add(subscription);
+                    return;
                 }
 
-                dbc.SaveChanges();
+                _dbContext.Subscriptions.Add(subscription);
             }
+
+            _dbContext.SaveChanges();
         }
 
         public void Unsubscribe(Address client, IEnumerable<MessageType> messageTypes)
@@ -138,20 +137,17 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                 throw new ArgumentNullException("messageTypes");
             }
 
-            using (var dbc = _dbContextFactory.CreateSubscriptionDbContext())
-            {
-                string clientAddress = client.ToString();
-                List<string> messageTypeStrings = messageTypes.Select(mt => mt.ToString()).ToList();
+            string clientAddress = client.ToString();
+            List<string> messageTypeStrings = messageTypes.Select(mt => mt.ToString()).ToList();
 
-                List<SubscriptionEntity> existing = dbc.Subscriptions.Where(
-                    s => s.SubscriberEndpoint == clientAddress
-                         && messageTypeStrings.Contains(s.MessageType))
-                    .ToList();
+            List<SubscriptionEntity> existing = _dbContext.Subscriptions.Where(
+                s => s.SubscriberEndpoint == clientAddress
+                     && messageTypeStrings.Contains(s.MessageType))
+                .ToList();
 
-                dbc.Subscriptions.RemoveRange(existing);
+            _dbContext.Subscriptions.RemoveRange(existing);
 
-                dbc.SaveChanges();
-            }
+            _dbContext.SaveChanges();
         }
     }
 }

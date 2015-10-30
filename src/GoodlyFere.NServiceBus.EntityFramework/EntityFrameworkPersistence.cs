@@ -27,6 +27,7 @@
 using System;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.SagaStorage;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus.Features;
@@ -47,6 +48,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework
         /// </summary>
         public EntityFrameworkPersistence()
         {
+            Defaults(
+                s =>
+                {
+                    s.EnableFeatureByDefault<EntityFrameworkSharedDbContext>();
+                });
+
             Supports<StorageType.Timeouts>(SetupTimeoutSettings);
             Supports<StorageType.Subscriptions>(SetupSubscriptionSettings);
             Supports<StorageType.Sagas>(SetupSagasSettings);

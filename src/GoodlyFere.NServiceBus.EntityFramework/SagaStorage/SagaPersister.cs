@@ -32,7 +32,7 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
-using GoodlyFere.NServiceBus.EntityFramework.Support;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus.Saga;
 
 #endregion
@@ -41,11 +41,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
     public class SagaPersister : ISagaPersister
     {
-        private readonly INServiceBusDbContextFactory _dbContextFactory;
+        private readonly ISagaDbContext _dbContext;
 
-        public SagaPersister(INServiceBusDbContextFactory dbContextFactory)
+        public SagaPersister(IDbContextProvider dbContextProvider)
         {
-            _dbContextFactory = dbContextFactory;
+            if (dbContextProvider == null)
+            {
+                throw new ArgumentNullException("dbContextProvider");
+            }
+
+            _dbContext = dbContextProvider.GetSagaDbContext();
         }
 
         public void Complete(IContainSagaData saga)
@@ -55,26 +60,23 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
+            try
             {
-                try
+                DbEntityEntry entry = _dbContext.Entry(saga);
+                DbSet set = _dbContext.SagaSet(saga.GetType());
+
+                if (entry.State == EntityState.Detached)
                 {
-                    DbEntityEntry entry = dbc.Entry(saga);
-                    DbSet set = dbc.SagaSet(saga.GetType());
-
-                    if (entry.State == EntityState.Detached)
-                    {
-                        set.Attach(saga);
-                    }
-
-                    set.Remove(saga);
-
-                    dbc.SaveChanges();
+                    set.Attach(saga);
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    // don't do anything, if we couldn't delete because it doesn't exist, that's OK
-                }
+
+                set.Remove(saga);
+
+                _dbContext.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // don't do anything, if we couldn't delete because it doesn't exist, that's OK
             }
         }
 
@@ -85,11 +87,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
-            {
-                object result = dbc.SagaSet(typeof(TSagaData)).Find(sagaId);
-                return (TSagaData)(result ?? default(TSagaData));
-            }
+            object result = _dbContext.SagaSet(typeof(TSagaData)).Find(sagaId);
+            return (TSagaData)(result ?? default(TSagaData));
         }
 
         public TSagaData Get<TSagaData>(string propertyName, object propertyValue) where TSagaData : IContainSagaData
@@ -107,27 +106,24 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
+            IQueryable setQueryable = _dbContext.SagaSet(typeof(TSagaData)).AsQueryable();
+            IQueryable result = setQueryable
+                .Provider
+                .CreateQuery(
+                    Expression.Call(
+                        typeof(Queryable),
+                        "Where",
+                        new[] { typeof(TSagaData) },
+                        setQueryable.Expression,
+                        Expression.Quote(filter)));
+
+            IEnumerator enumerator = result.GetEnumerator();
+            if (enumerator.MoveNext())
             {
-                IQueryable setQueryable = dbc.SagaSet(typeof(TSagaData)).AsQueryable();
-                IQueryable result = setQueryable
-                    .Provider
-                    .CreateQuery(
-                        Expression.Call(
-                            typeof(Queryable),
-                            "Where",
-                            new[] { typeof(TSagaData) },
-                            setQueryable.Expression,
-                            Expression.Quote(filter)));
-
-                IEnumerator enumerator = result.GetEnumerator();
-                if (enumerator.MoveNext())
-                {
-                    return (TSagaData)enumerator.Current;
-                }
-
-                return default(TSagaData);
+                return (TSagaData)enumerator.Current;
             }
+
+            return default(TSagaData);
         }
 
         public void Save(IContainSagaData saga)
@@ -137,11 +133,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
-            {
-                dbc.SagaSet(saga.GetType()).Add(saga);
-                dbc.SaveChanges();
-            }
+            _dbContext.SagaSet(saga.GetType()).Add(saga);
+            _dbContext.SaveChanges();
         }
 
         public void Update(IContainSagaData saga)
@@ -151,30 +144,27 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext())
+            using (DbContextTransaction transaction = _dbContext.Database.BeginTransaction(IsolationLevel.Serializable))
             {
-                using (DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable))
+                try
                 {
-                    try
+                    object existingEnt = _dbContext.SagaSet(saga.GetType()).Find(saga.Id);
+                    if (existingEnt == null)
                     {
-                        object existingEnt = dbc.SagaSet(saga.GetType()).Find(saga.Id);
-                        if (existingEnt == null)
-                        {
-                            throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                        }
-
-                        DbEntityEntry entry = dbc.Entry(existingEnt);
-                        entry.CurrentValues.SetValues(saga);
-                        entry.State = EntityState.Modified;
-                        dbc.SaveChanges();
-
-                        transaction.Commit();
+                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
                     }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+
+                    DbEntityEntry entry = _dbContext.Entry(existingEnt);
+                    entry.CurrentValues.SetValues(saga);
+                    entry.State = EntityState.Modified;
+                    _dbContext.SaveChanges();
+
+                    transaction.Commit();
+                }
+                catch (Exception)
+                {
+                    transaction.Rollback();
+                    throw;
                 }
             }
         }
