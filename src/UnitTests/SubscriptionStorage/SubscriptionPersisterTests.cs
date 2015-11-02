@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using FluentAssertions;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using Moq;
 using NServiceBus;
@@ -42,17 +43,17 @@ namespace UnitTests.SubscriptionStorage
     public class SubscriptionPersisterTests : IDisposable
     {
         private readonly TestDbContext _dbContext;
-        private readonly Mock<INServiceBusDbContextFactory> _mockFactory;
+        private readonly Mock<IDbContextProvider> _mockDbContextProvider;
         private readonly SubscriptionPersister _persister;
 
         public SubscriptionPersisterTests()
         {
             _dbContext = new TestDbContext();
 
-            _mockFactory = new Mock<INServiceBusDbContextFactory>();
-            _mockFactory.Setup(m => m.CreateSubscriptionDbContext()).Returns(new TestDbContext());
+            _mockDbContextProvider = new Mock<IDbContextProvider>();
+            _mockDbContextProvider.Setup(m => m.GetSubscriptionDbContext()).Returns(new TestDbContext());
 
-            _persister = new SubscriptionPersister(_mockFactory.Object);
+            _persister = new SubscriptionPersister(_mockDbContextProvider.Object);
 
             _dbContext.Subscriptions.RemoveRange(_dbContext.Subscriptions);
             _dbContext.SaveChanges();
@@ -71,7 +72,7 @@ namespace UnitTests.SubscriptionStorage
         {
             var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
 
-            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+            _mockDbContextProvider.Verify(m => m.GetSubscriptionDbContext(), Times.Never());
             result.Should().NotBeNull();
             result.Count().Should().Be(0);
         }
@@ -109,7 +110,7 @@ namespace UnitTests.SubscriptionStorage
             _persister.Invoking(p => p.GetSubscriberAddressesForMessage(null))
                 .ShouldThrow<ArgumentNullException>();
 
-            _mockFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+            _mockDbContextProvider.Verify(m => m.GetSubscriptionDbContext(), Times.Never());
         }
 
         // subscribe, duplicate message types, saves unique records

@@ -51,7 +51,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework
             Defaults(
                 s =>
                 {
-                    s.EnableFeatureByDefault<EntityFrameworkSharedDbContext>();
+                    s.EnableFeatureByDefault<EntityFrameworkSharedDbContextFeature>();
                 });
 
             Supports<StorageType.Timeouts>(SetupTimeoutSettings);
@@ -61,17 +61,17 @@ namespace GoodlyFere.NServiceBus.EntityFramework
 
         private void SetupSagasSettings(SettingsHolder s)
         {
-            s.EnableFeatureByDefault<EntityFrameworkSagaStorage>();
+            s.EnableFeatureByDefault<EntityFrameworkSagaStorageFeature>();
         }
 
         private void SetupSubscriptionSettings(SettingsHolder s)
         {
-            s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorage>();
+            s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorageFeature>();
         }
 
         private void SetupTimeoutSettings(SettingsHolder s)
         {
-            s.EnableFeatureByDefault<EntityFrameworkTimeoutStorage>();
+            s.EnableFeatureByDefault<EntityFrameworkTimeoutStorageFeature>();
         }
     }
 }

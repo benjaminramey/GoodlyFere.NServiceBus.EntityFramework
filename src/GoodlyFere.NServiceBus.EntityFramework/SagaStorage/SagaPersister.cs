@@ -41,7 +41,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
     public class SagaPersister : ISagaPersister
     {
-        private readonly ISagaDbContext _dbContext;
+        private readonly IDbContextProvider _dbContextProvider;
+        private ISagaDbContext _dbContext;
 
         public SagaPersister(IDbContextProvider dbContextProvider)
         {
@@ -50,7 +51,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("dbContextProvider");
             }
 
-            _dbContext = dbContextProvider.GetSagaDbContext();
+            _dbContextProvider = dbContextProvider;
+        }
+
+        private ISagaDbContext DbContext
+        {
+            get
+            {
+                return _dbContext ?? (_dbContext = _dbContextProvider.GetSagaDbContext());
+            }
         }
 
         public void Complete(IContainSagaData saga)
@@ -62,8 +71,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             try
             {
-                DbEntityEntry entry = _dbContext.Entry(saga);
-                DbSet set = _dbContext.SagaSet(saga.GetType());
+                DbEntityEntry entry = DbContext.Entry(saga);
+                DbSet set = DbContext.SagaSet(saga.GetType());
 
                 if (entry.State == EntityState.Detached)
                 {
@@ -72,7 +81,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
                 set.Remove(saga);
 
-                _dbContext.SaveChanges();
+                DbContext.SaveChanges();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -87,7 +96,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            object result = _dbContext.SagaSet(typeof(TSagaData)).Find(sagaId);
+            object result = DbContext.SagaSet(typeof(TSagaData)).Find(sagaId);
             return (TSagaData)(result ?? default(TSagaData));
         }
 
@@ -106,7 +115,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            IQueryable setQueryable = _dbContext.SagaSet(typeof(TSagaData)).AsQueryable();
+            IQueryable setQueryable = DbContext.SagaSet(typeof(TSagaData)).AsQueryable();
             IQueryable result = setQueryable
                 .Provider
                 .CreateQuery(
@@ -133,8 +142,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            _dbContext.SagaSet(saga.GetType()).Add(saga);
-            _dbContext.SaveChanges();
+            DbContext.SagaSet(saga.GetType()).Add(saga);
+            DbContext.SaveChanges();
         }
 
         public void Update(IContainSagaData saga)
@@ -144,20 +153,20 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (DbContextTransaction transaction = _dbContext.Database.BeginTransaction(IsolationLevel.Serializable))
+            using (DbContextTransaction transaction = DbContext.Database.BeginTransaction(IsolationLevel.Serializable))
             {
                 try
                 {
-                    object existingEnt = _dbContext.SagaSet(saga.GetType()).Find(saga.Id);
+                    object existingEnt = DbContext.SagaSet(saga.GetType()).Find(saga.Id);
                     if (existingEnt == null)
                     {
                         throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
                     }
 
-                    DbEntityEntry entry = _dbContext.Entry(existingEnt);
+                    DbEntityEntry entry = DbContext.Entry(existingEnt);
                     entry.CurrentValues.SetValues(saga);
                     entry.State = EntityState.Modified;
-                    _dbContext.SaveChanges();
+                    DbContext.SaveChanges();
 
                     transaction.Commit();
                 }

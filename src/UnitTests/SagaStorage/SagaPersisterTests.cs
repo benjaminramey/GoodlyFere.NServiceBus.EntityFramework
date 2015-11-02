@@ -29,6 +29,7 @@ using FluentAssertions;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SagaStorage;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using Moq;
 using NServiceBus.Saga;
 using Xunit;
@@ -39,15 +40,15 @@ namespace UnitTests.SagaStorage
 {
     public class SagaPersisterTests
     {
-        private readonly Mock<INServiceBusDbContextFactory> _mockFactory;
+        private readonly Mock<IDbContextProvider> _mockDbContextProvider;
         private readonly SagaPersister _persister;
 
         public SagaPersisterTests()
         {
-            _mockFactory = new Mock<INServiceBusDbContextFactory>();
-            _mockFactory.Setup(m => m.CreateSagaDbContext()).Returns(new TestDbContext());
+            _mockDbContextProvider = new Mock<IDbContextProvider>();
+            _mockDbContextProvider.Setup(m => m.GetSagaDbContext()).Returns(new TestDbContext());
 
-            _persister = new SagaPersister(_mockFactory.Object);
+            _persister = new SagaPersister(_mockDbContextProvider.Object);
         }
 
         [Fact]
@@ -59,7 +60,7 @@ namespace UnitTests.SagaStorage
             mockDbContext.SetupGet(m => m.Database).Returns(realDbContext.Database);
             mockDbContext.Setup(m => m.Entry(It.IsAny<IContainSagaData>()))
                 .Throws(new Exception("test exception"));
-            _mockFactory.Setup(m => m.CreateSagaDbContext())
+            _mockDbContextProvider.Setup(m => m.GetSagaDbContext())
                 .Returns(mockDbContext.Object);
 
             _persister.Invoking(p => p.Complete(saga))
@@ -188,7 +189,7 @@ namespace UnitTests.SagaStorage
 
             _persister.Save(sagaData);
 
-            _mockFactory.Verify(m => m.CreateSagaDbContext(), Times.Once());
+            _mockDbContextProvider.Verify(m => m.GetSagaDbContext(), Times.Once());
         }
 
         [Fact]

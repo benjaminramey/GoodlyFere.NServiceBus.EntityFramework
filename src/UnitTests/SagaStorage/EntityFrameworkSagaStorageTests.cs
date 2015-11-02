@@ -39,7 +39,7 @@ namespace UnitTests.SagaStorage
         [Fact]
         public void Constructor_DoesNotThrow()
         {
-            Action action = () => new EntityFrameworkSagaStorage();
+            Action action = () => new EntityFrameworkSagaStorageFeature();
 
             action.Invoking(a => a.Invoke()).ShouldNotThrow();
         }

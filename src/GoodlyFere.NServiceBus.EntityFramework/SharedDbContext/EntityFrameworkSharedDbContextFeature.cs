@@ -5,17 +5,18 @@ using NServiceBus.Features;
 
 namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
 {
-    public class EntityFrameworkSharedDbContext : Feature
+    public class EntityFrameworkSharedDbContextFeature : Feature
     {
-        internal EntityFrameworkSharedDbContext()
+        internal EntityFrameworkSharedDbContextFeature()
         {
         }
 
         protected override void Setup(FeatureConfigurationContext context)
         {
-            context.Pipeline.Register<CreateDbContextBehavior.Registration>();
-
+            context.Container.ConfigureComponent<CreateDbContextBehavior>(DependencyLifecycle.InstancePerCall);
             context.Container.ConfigureComponent<InternalDbContextProvider>(DependencyLifecycle.SingleInstance);
+
+            context.Pipeline.Register<CreateDbContextBehavior.Registration>();
         }
     }
 }

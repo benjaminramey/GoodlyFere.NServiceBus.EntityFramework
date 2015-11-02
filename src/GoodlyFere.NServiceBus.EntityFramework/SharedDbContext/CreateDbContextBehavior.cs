@@ -59,6 +59,10 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                 DisposeDbContext(lazyTimeoutCreation);
                 DisposeDbContext(lazySagaCreation);
                 DisposeDbContext(lazySubscriptionCreation);
+
+                context.Remove(ContextKeys.TimeoutDbContextKey);
+                context.Remove(ContextKeys.SagaDbContextKey);
+                context.Remove(ContextKeys.SubscriptionDbContextKey);
             }
         }
 
@@ -128,6 +132,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
             {
                 transaction.Commit();
                 transaction.Dispose();
+
+                context.Remove(transactionKey);
             }
         }
 
@@ -138,6 +144,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
             {
                 transaction.Rollback();
                 transaction.Dispose();
+
+                context.Remove(transactionKey);
             }
         }
 
