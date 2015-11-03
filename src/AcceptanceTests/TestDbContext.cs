@@ -2,50 +2,39 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
-using System.Reflection;
-using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
-using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
-using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
-using NServiceBus.AcceptanceTests.Sagas;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus.Saga;
 
 namespace AcceptanceTests
 {
-    public class TestDbContext : DbContext, ISubscriptionDbContext, ITimeoutDbContext, ISagaDbContext
+    public class TestDbContext : NServiceBusDbContext
     {
-        private readonly Dictionary<Type, DbContext> DbContexts;
+        private readonly Dictionary<Type, DbContext> _dbContexts;
 
         public TestDbContext()
             : base("TestDbContext")
         {
-            DbContexts = new Dictionary<Type, DbContext>();
-            Database.SetInitializer(new DropCreateDatabaseAlways<TestDbContext>());
+            _dbContexts = new Dictionary<Type, DbContext>();
+            Database.SetInitializer(new CreateDatabaseIfNotExists<TestDbContext>());
         }
 
-        public DbSet SagaSet(Type sagaDataType)
+        public override DbSet Set(Type sagaDataType)
         {
             DbContext dbContext;
-            Type dbContextType;
 
-            if (DbContexts.ContainsKey(sagaDataType))
+            if (_dbContexts.ContainsKey(sagaDataType))
             {
-                dbContext = DbContexts[sagaDataType];
-                dbContextType = dbContext.GetType();
+                dbContext = _dbContexts[sagaDataType];
             }
             else
             {
-                dbContextType = typeof(TestGenericDbContext<>).MakeGenericType(sagaDataType);
-                dbContext = (DbContext)Activator.CreateInstance(dbContextType);
-                DbContexts.Add(sagaDataType, dbContext);
+                Type dbContextType = typeof(TestGenericDbContext<>).MakeGenericType(sagaDataType);
+                dbContext = (DbContext)Activator.CreateInstance(dbContextType, "TestDbContext");
+                _dbContexts.Add(sagaDataType, dbContext);
             }
 
-            PropertyInfo prop = dbContextType.GetProperty("SagaData");
-            return (DbSet)prop.GetValue(dbContext);
+            return dbContext.Set(sagaDataType);
         }
-
-        public DbSet<SubscriptionEntity> Subscriptions { get; set; }
-
-        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
 
     public class TestGenericDbContext<TSagaDataType> : DbContext

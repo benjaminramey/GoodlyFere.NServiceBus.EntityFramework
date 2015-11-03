@@ -27,9 +27,7 @@
 using System;
 using System.Data.Entity;
 using System.Linq;
-using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
-using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
-using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
+using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus;
 using NServiceBus.Saga;
 
@@ -37,7 +35,7 @@ using NServiceBus.Saga;
 
 namespace UnitTests
 {
-    public class TestDbContext : DbContext, ISagaDbContext, ISubscriptionDbContext, ITimeoutDbContext
+    public class TestDbContext : NServiceBusDbContext
     {
         public TestDbContext()
             : base("testdb")
@@ -45,19 +43,6 @@ namespace UnitTests
         }
 
         public DbSet<TestSagaData> TestSagas { get; set; }
-
-        public virtual DbSet SagaSet(Type sagaDataType)
-        {
-            if (sagaDataType == typeof(TestSagaData))
-            {
-                return TestSagas;
-            }
-
-            throw new ArgumentOutOfRangeException("No DbSets of type " + sagaDataType + " found.");
-        }
-
-        public DbSet<SubscriptionEntity> Subscriptions { get; set; }
-        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
 
     public class TestSagaData : IContainSagaData

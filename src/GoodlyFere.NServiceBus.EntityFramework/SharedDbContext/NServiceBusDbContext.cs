@@ -14,12 +14,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
         {
         }
 
-        public virtual DbSet SagaSet(Type sagaDataType)
+        public virtual bool HasSet(Type entityType)
         {
-            throw new NotImplementedException();
+            return Set(entityType) != null;
         }
 
-        public DbSet<SubscriptionEntity> Subscriptions { get; set; }
-        public DbSet<TimeoutDataEntity> Timeouts { get; set; }
+        public virtual DbSet<SubscriptionEntity> Subscriptions { get; set; }
+        public virtual DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
 }

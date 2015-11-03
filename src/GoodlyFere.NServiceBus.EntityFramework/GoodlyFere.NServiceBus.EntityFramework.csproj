@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="ContextKeys.cs" />
     <Compile Include="Exceptions\CouldNotFindDbContextException.cs" />
+    <Compile Include="Exceptions\SagaDbSetMissingException.cs" />
     <Compile Include="Interfaces\INServiceBusDbContext.cs" />
     <Compile Include="Interfaces\INServiceBusDbContextFactory.cs" />
     <Compile Include="Interfaces\ISagaDbContext.cs" />

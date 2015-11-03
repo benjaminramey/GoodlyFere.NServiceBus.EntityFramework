@@ -31,6 +31,7 @@ using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
+using GoodlyFere.NServiceBus.EntityFramework.Exceptions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus.Saga;
@@ -69,10 +70,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
+            Type sagaType = saga.GetType();
+            if (!DbContext.HasSet(sagaType))
+            {
+                throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
+            }
+
             try
             {
                 DbEntityEntry entry = DbContext.Entry(saga);
-                DbSet set = DbContext.SagaSet(saga.GetType());
+                DbSet set = DbContext.Set(sagaType);
 
                 if (entry.State == EntityState.Detached)
                 {
@@ -91,23 +98,35 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
         {
+            Type sagaType = typeof(TSagaData);
+            if (!DbContext.HasSet(sagaType))
+            {
+                throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
+            }
+
             if (sagaId == Guid.Empty)
             {
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            object result = DbContext.SagaSet(typeof(TSagaData)).Find(sagaId);
+            object result = DbContext.Set(sagaType).Find(sagaId);
             return (TSagaData)(result ?? default(TSagaData));
         }
 
         public TSagaData Get<TSagaData>(string propertyName, object propertyValue) where TSagaData : IContainSagaData
         {
+            Type sagaType = typeof(TSagaData);
+            if (!DbContext.HasSet(sagaType))
+            {
+                throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
+            }
+
             if (string.IsNullOrEmpty(propertyName))
             {
                 throw new ArgumentNullException("propertyName");
             }
 
-            ParameterExpression param = Expression.Parameter(typeof(TSagaData), "sagaData");
+            ParameterExpression param = Expression.Parameter(sagaType, "sagaData");
             Expression<Func<TSagaData, bool>> filter = Expression.Lambda<Func<TSagaData, bool>>(
                 Expression.MakeBinary(
                     ExpressionType.Equal,
@@ -115,14 +134,14 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Constant(propertyValue)),
                 param);
 
-            IQueryable setQueryable = DbContext.SagaSet(typeof(TSagaData)).AsQueryable();
+            IQueryable setQueryable = DbContext.Set(sagaType).AsQueryable();
             IQueryable result = setQueryable
                 .Provider
                 .CreateQuery(
                     Expression.Call(
                         typeof(Queryable),
                         "Where",
-                        new[] { typeof(TSagaData) },
+                        new[] { sagaType },
                         setQueryable.Expression,
                         Expression.Quote(filter)));
 
@@ -142,7 +161,13 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            DbContext.SagaSet(saga.GetType()).Add(saga);
+            Type sagaType = saga.GetType();
+            if (!DbContext.HasSet(sagaType))
+            {
+                throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
+            }
+
+            DbContext.Set(sagaType).Add(saga);
             DbContext.SaveChanges();
         }
 
@@ -153,29 +178,23 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            using (DbContextTransaction transaction = DbContext.Database.BeginTransaction(IsolationLevel.Serializable))
+            Type sagaType = saga.GetType();
+            if (!DbContext.HasSet(sagaType))
             {
-                try
-                {
-                    object existingEnt = DbContext.SagaSet(saga.GetType()).Find(saga.Id);
-                    if (existingEnt == null)
-                    {
-                        throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                    }
-
-                    DbEntityEntry entry = DbContext.Entry(existingEnt);
-                    entry.CurrentValues.SetValues(saga);
-                    entry.State = EntityState.Modified;
-                    DbContext.SaveChanges();
-
-                    transaction.Commit();
-                }
-                catch (Exception)
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
+
+            object existingEnt = DbContext.Set(sagaType).Find(saga.Id);
+            if (existingEnt == null)
+            {
+                throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+            }
+
+            DbEntityEntry entry = DbContext.Entry(existingEnt);
+            entry.CurrentValues.SetValues(saga);
+            entry.State = EntityState.Modified;
+
+            DbContext.SaveChanges();
         }
     }
 }
