@@ -7,57 +7,65 @@ using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus.AcceptanceTests.Sagas;
+using NServiceBus.Saga;
 
 namespace AcceptanceTests
 {
     public class TestDbContext : DbContext, ISubscriptionDbContext, ITimeoutDbContext, ISagaDbContext
     {
+        private readonly Dictionary<Type, DbContext> DbContexts;
+
         public TestDbContext()
             : base("TestDbContext")
         {
-            Database.SetInitializer(new CreateDatabaseIfNotExists<TestDbContext>());
+            DbContexts = new Dictionary<Type, DbContext>();
+            Database.SetInitializer(new DropCreateDatabaseAlways<TestDbContext>());
         }
-
-        public DbSet<TestSagaData> TestSagas { get; set; }
-
-        public DbSet<Issue_1819.Endpoint.Saga1.Saga1Data> Saga1Data1 { get; set; }
-
-        public DbSet<When_started_by_event_from_another_saga.SagaThatPublishesAnEvent.Saga1.Saga1Data> Saga1Data2 { get;
-            set; }
-
-        public DbSet<Issue_2044.ReceiverWithSaga.Saga1.Saga1Data> Saga1Data3 { get; set; }
-        public DbSet<When_sagas_cant_be_found.ReceiverWithOrderedSagas.Saga1.Saga1Data> Saga1Data4 { get; set; }
-        public DbSet<When_sagas_cant_be_found.ReceiverWithSagas.Saga1.Saga1Data> Saga1Data5 { get; set; }
-        public DbSet<When_sending_from_a_saga_handle.Endpoint.Saga1Data> Saga1Data6 { get; set; }
-        public DbSet<When_sending_from_a_saga_timeout.Endpoint.Saga1.Saga1Data> Saga1Data7 { get; set; }
-
-        public DbSet<When_sagas_cant_be_found.ReceiverWithOrderedSagas.Saga2.Saga2Data> Saga1Data8 { get; set; }
-        public DbSet<When_sagas_cant_be_found.ReceiverWithSagas.Saga2.Saga2Data> Saga1Data9 { get; set; }
-        public DbSet<When_sending_from_a_saga_handle.Endpoint.Saga2.Saga2Data> Saga1Data10 { get; set; }
-        public DbSet<When_sending_from_a_saga_timeout.Endpoint.Saga2.Saga2Data> Saga1Data11 { get; set; }
-
-        public DbSet<When_started_by_event_from_another_saga.SagaThatIsStartedByTheEvent.Saga2.Saga2Data> Saga1Data12 {
-            get; set; }
 
         public DbSet SagaSet(Type sagaDataType)
         {
-            Type dbContextType = typeof(TestDbContext);
-            List<PropertyInfo> sagaProps = dbContextType.GetProperties().Where(p => p.Name.Contains("Saga")).ToList();
+            DbContext dbContext;
+            Type dbContextType;
 
-            PropertyInfo sagProperty =
-                sagaProps.Single(s => s.PropertyType.GenericTypeArguments.Any(t => t == sagaDataType));
-
-            if (sagProperty == null)
+            if (DbContexts.ContainsKey(sagaDataType))
             {
-                throw new NotImplementedException(
-                    string.Format("Can't find property for saga type: {0}", sagaDataType.FullName));
+                dbContext = DbContexts[sagaDataType];
+                dbContextType = dbContext.GetType();
+            }
+            else
+            {
+                dbContextType = typeof(TestGenericDbContext<>).MakeGenericType(sagaDataType);
+                dbContext = (DbContext)Activator.CreateInstance(dbContextType);
+                DbContexts.Add(sagaDataType, dbContext);
             }
 
-            return (DbSet)sagProperty.GetValue(this);
+            PropertyInfo prop = dbContextType.GetProperty("SagaData");
+            return (DbSet)prop.GetValue(dbContext);
         }
 
         public DbSet<SubscriptionEntity> Subscriptions { get; set; }
 
         public DbSet<TimeoutDataEntity> Timeouts { get; set; }
+    }
+
+    public class TestGenericDbContext<TSagaDataType> : DbContext
+        where TSagaDataType : class, IContainSagaData
+    {
+        public TestGenericDbContext(string connectionString)
+            : base(connectionString)
+        {
+        }
+
+        public DbSet<TSagaDataType> SagaData { get; set; }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            string tableName = typeof(TSagaDataType).Name + "_" + Guid.NewGuid();
+
+            modelBuilder.Entity<TSagaDataType>()
+                .ToTable(tableName);
+
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }
