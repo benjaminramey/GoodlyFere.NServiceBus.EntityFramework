@@ -16,6 +16,7 @@ namespace AcceptanceTests
     {
         private readonly TestBaseDbContext _baseDbContext;
         private readonly Dictionary<Type, DbContext> _dbContexts;
+        private bool _alreadyCalled;
 
         public TestDbContext()
         {
@@ -66,12 +67,22 @@ namespace AcceptanceTests
         public int SaveChanges()
         {
             int returnVal = 0;
-            foreach (var dbContext in _dbContexts.Values)
+            if (_alreadyCalled)
+            {
+                return returnVal;
+            }
+
+            _alreadyCalled = true;
+
+            foreach (var dbContext in _dbContexts.Values.Where(dbc => dbc.ChangeTracker.HasChanges()))
             {
                 returnVal += dbContext.SaveChanges();
             }
 
-            returnVal += _baseDbContext.SaveChanges();
+            if (_baseDbContext.ChangeTracker.HasChanges())
+            {
+                returnVal += _baseDbContext.SaveChanges();
+            }
 
             return returnVal;
         }
@@ -138,10 +149,6 @@ namespace AcceptanceTests
             }
         }
 
-        private static bool IsSagaDataType(Type entityType)
-        {
-            return typeof(IContainSagaData).IsAssignableFrom(entityType);
-        }
         private static Type GetRealEntityType(object saga)
         {
             Type sagaType = saga.GetType();
@@ -154,6 +161,11 @@ namespace AcceptanceTests
             }
 
             return sagaType;
+        }
+
+        private static bool IsSagaDataType(Type entityType)
+        {
+            return typeof(IContainSagaData).IsAssignableFrom(entityType);
         }
     }
 
