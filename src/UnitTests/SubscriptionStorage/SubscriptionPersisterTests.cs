@@ -71,8 +71,7 @@ namespace UnitTests.SubscriptionStorage
         public void GetSubscriberAddressesForMessage_EmptyMessages_ReturnsEmpty()
         {
             var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
-
-            _mockDbContextFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
+            
             result.Should().NotBeNull();
             result.Count().Should().Be(0);
         }

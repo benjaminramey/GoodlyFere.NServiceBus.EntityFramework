@@ -58,7 +58,7 @@ namespace UnitTests.SagaStorage
             var saga = AddSaga();
             var mockDbContext = new Mock<ISagaDbContext>();
             mockDbContext.SetupGet(m => m.Database).Returns(realDbContext.Database);
-            mockDbContext.Setup(m => m.Entry(It.IsAny<IContainSagaData>()))
+            mockDbContext.Setup(m => m.HasSet(It.IsAny<Type>()))
                 .Throws(new Exception("test exception"));
             _mockDbContextProvider.Setup(m => m.GetSagaDbContext())
                 .Returns(mockDbContext.Object);
@@ -181,17 +181,7 @@ namespace UnitTests.SagaStorage
         {
             _persister.Invoking(p => p.Save(null)).ShouldThrow<ArgumentNullException>();
         }
-
-        [Fact]
-        public void Save_ShouldCreateSagaDbContext()
-        {
-            var sagaData = new TestSagaData();
-
-            _persister.Save(sagaData);
-
-            _mockDbContextProvider.Verify(m => m.GetSagaDbContext(), Times.Once());
-        }
-
+        
         [Fact]
         public void Save_ShouldSaveSaga()
         {

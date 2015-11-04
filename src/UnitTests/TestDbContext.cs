@@ -38,7 +38,7 @@ namespace UnitTests
     public class TestDbContext : NServiceBusDbContext
     {
         public TestDbContext()
-            : base("testdb")
+            : base("TestDbContext")
         {
         }
 
