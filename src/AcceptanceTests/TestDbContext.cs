@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Core.Objects.DataClasses;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
@@ -42,7 +43,7 @@ namespace AcceptanceTests
 
         public DbEntityEntry Entry(object entity)
         {
-            Type entityType = entity.GetType();
+            Type entityType = GetRealEntityType(entity);
 
             if (IsSagaDataType(entityType) && _dbContexts.ContainsKey(entityType))
             {
@@ -53,7 +54,7 @@ namespace AcceptanceTests
 
         public DbEntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class
         {
-            Type entityType = typeof(TEntity);
+            Type entityType = GetRealEntityType(entity);
 
             if (IsSagaDataType(entityType) && _dbContexts.ContainsKey(entityType))
             {
@@ -141,6 +142,19 @@ namespace AcceptanceTests
         {
             return typeof(IContainSagaData).IsAssignableFrom(entityType);
         }
+        private static Type GetRealEntityType(object saga)
+        {
+            Type sagaType = saga.GetType();
+
+            // if this class is the dynamic proxy type inserted by EF
+            // then we want the base type (actual saga data type) not the dynamic proxy
+            if (typeof(IEntityWithChangeTracker).IsAssignableFrom(sagaType))
+            {
+                sagaType = sagaType.BaseType;
+            }
+
+            return sagaType;
+        }
     }
 
     public class TestBaseDbContext : NServiceBusDbContext
@@ -165,7 +179,7 @@ namespace AcceptanceTests
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             var type = typeof(TSagaDataType);
-            string tableName = type.Name + "_" + (type.Namespace ?? "no.namespace").Replace(".", "_");
+            string tableName = type.FullName.Replace(".", "_").Replace("+", "_");
 
             modelBuilder.Entity<TSagaDataType>()
                 .ToTable(tableName);
