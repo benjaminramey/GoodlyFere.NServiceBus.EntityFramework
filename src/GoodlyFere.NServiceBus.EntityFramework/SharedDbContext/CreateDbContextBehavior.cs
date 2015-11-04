@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Data;
 using System.Data.Entity;
+using System.Transactions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus.Pipeline;
 using NServiceBus.Pipeline.Contexts;
+using IsolationLevel = System.Data.IsolationLevel;
 
 namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
 {
@@ -22,36 +23,28 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
 
         public void Invoke(IncomingContext context, Action next)
         {
-            bool alreadySetup;
-            bool hasAlreadySetupFlag = context.TryGet(ContextKeys.SharedDbContextSetupFlagKey, out alreadySetup);
-
-            if (hasAlreadySetupFlag && alreadySetup)
-            {
-                next();
-                return;
-            }
-
-            Lazy<ISagaDbContext> lazySagaCreation = CreateLazySagaDbContext(context);
-            context.Set(ContextKeys.SagaDbContextKey, lazySagaCreation);
-            context.Set(ContextKeys.SharedDbContextSetupFlagKey, true);
+            Lazy<ISagaDbContext> lazyDbContext = CreateLazySagaDbContext(context);
+            context.Set(ContextKeys.SagaDbContextKey, lazyDbContext);
 
             try
             {
                 next();
-                FinishTransaction(context);
-            }
-            catch (Exception)
-            {
-                RollbackTransaction(context);
-                context.Remove(ContextKeys.SagaTransactionKey);
-                throw;
+
+                if (lazyDbContext.IsValueCreated)
+                {
+                    FinishTransaction(context);
+                }
             }
             finally
             {
-                DisposeDbContext(lazySagaCreation);
+                if (lazyDbContext.IsValueCreated)
+                {
+                    DisposeTransaction(context);
+
+                    lazyDbContext.Value.Dispose();
+                }
 
                 context.Remove(ContextKeys.SagaDbContextKey);
-                context.Remove(ContextKeys.SharedDbContextSetupFlagKey);
             }
         }
 
@@ -61,9 +54,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                 () =>
                 {
                     ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext();
-                    DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable);
 
-                    context.Set(ContextKeys.SagaTransactionKey, transaction);
+                    if (Transaction.Current == null)
+                    {
+                        DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable);
+                        context.Set(ContextKeys.SagaTransactionKey, transaction);
+                    }
 
                     return dbc;
                 };
@@ -71,12 +67,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
             return new Lazy<ISagaDbContext>(lazyFunc);
         }
 
-        private static void DisposeDbContext<TContext>(Lazy<TContext> lazyDbContextCreation)
-            where TContext : IDisposable
+        private void DisposeTransaction(IncomingContext context)
         {
-            if (lazyDbContextCreation.IsValueCreated)
+            DbContextTransaction transaction;
+            if (context.TryGet(ContextKeys.SagaTransactionKey, out transaction))
             {
-                lazyDbContextCreation.Value.Dispose();
+                transaction.Dispose();
             }
         }
 
@@ -86,18 +82,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
             if (context.TryGet(ContextKeys.SagaTransactionKey, out transaction))
             {
                 transaction.Commit();
-                transaction.Dispose();
-
-                context.Remove(ContextKeys.SagaTransactionKey);
-            }
-        }
-
-        private void RollbackTransaction(IncomingContext context)
-        {
-            DbContextTransaction transaction;
-            if (context.TryGet(ContextKeys.SagaTransactionKey, out transaction))
-            {
-                transaction.Rollback();
                 transaction.Dispose();
             }
         }
