@@ -43,17 +43,17 @@ namespace UnitTests.SubscriptionStorage
     public class SubscriptionPersisterTests : IDisposable
     {
         private readonly TestDbContext _dbContext;
-        private readonly Mock<IDbContextProvider> _mockDbContextProvider;
+        private readonly Mock<INServiceBusDbContextFactory> _mockDbContextFactory;
         private readonly SubscriptionPersister _persister;
 
         public SubscriptionPersisterTests()
         {
             _dbContext = new TestDbContext();
 
-            _mockDbContextProvider = new Mock<IDbContextProvider>();
-            _mockDbContextProvider.Setup(m => m.GetSubscriptionDbContext()).Returns(new TestDbContext());
+            _mockDbContextFactory = new Mock<INServiceBusDbContextFactory>();
+            _mockDbContextFactory.Setup(m => m.CreateSubscriptionDbContext()).Returns(new TestDbContext());
 
-            _persister = new SubscriptionPersister(_mockDbContextProvider.Object);
+            _persister = new SubscriptionPersister(_mockDbContextFactory.Object);
 
             _dbContext.Subscriptions.RemoveRange(_dbContext.Subscriptions);
             _dbContext.SaveChanges();
@@ -72,7 +72,7 @@ namespace UnitTests.SubscriptionStorage
         {
             var result = _persister.GetSubscriberAddressesForMessage(new List<MessageType>());
 
-            _mockDbContextProvider.Verify(m => m.GetSubscriptionDbContext(), Times.Never());
+            _mockDbContextFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
             result.Should().NotBeNull();
             result.Count().Should().Be(0);
         }
@@ -110,7 +110,7 @@ namespace UnitTests.SubscriptionStorage
             _persister.Invoking(p => p.GetSubscriberAddressesForMessage(null))
                 .ShouldThrow<ArgumentNullException>();
 
-            _mockDbContextProvider.Verify(m => m.GetSubscriptionDbContext(), Times.Never());
+            _mockDbContextFactory.Verify(m => m.CreateSubscriptionDbContext(), Times.Never());
         }
 
         // subscribe, duplicate message types, saves unique records

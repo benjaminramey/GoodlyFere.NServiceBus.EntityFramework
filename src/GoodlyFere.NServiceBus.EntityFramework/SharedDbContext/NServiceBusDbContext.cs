@@ -10,7 +10,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
     public abstract class NServiceBusDbContext : DbContext, ISubscriptionDbContext, ITimeoutDbContext, ISagaDbContext
     {
         protected NServiceBusDbContext(string nameOrConnectionString)
-            : base("NServiceBusDbContext")
+            : base(nameOrConnectionString)
         {
         }
 

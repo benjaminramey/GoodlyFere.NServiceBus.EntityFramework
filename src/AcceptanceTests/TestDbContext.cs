@@ -21,19 +21,30 @@ namespace AcceptanceTests
         public override DbSet Set(Type sagaDataType)
         {
             DbContext dbContext;
-
-            if (_dbContexts.ContainsKey(sagaDataType))
+            Type realType = sagaDataType;
+            
+            if (_dbContexts.ContainsKey(realType))
             {
-                dbContext = _dbContexts[sagaDataType];
+                dbContext = _dbContexts[realType];
             }
             else
             {
-                Type dbContextType = typeof(TestGenericDbContext<>).MakeGenericType(sagaDataType);
+                Type dbContextType = typeof(TestGenericDbContext<>).MakeGenericType(realType);
                 dbContext = (DbContext)Activator.CreateInstance(dbContextType, "TestDbContext");
-                _dbContexts.Add(sagaDataType, dbContext);
+                _dbContexts.Add(realType, dbContext);
             }
 
-            return dbContext.Set(sagaDataType);
+            return dbContext.Set(realType);
+        }
+
+        public override int SaveChanges()
+        {
+            foreach (var dbContext in _dbContexts.Values)
+            {
+                dbContext.SaveChanges();
+            }
+
+            return base.SaveChanges();
         }
     }
 
@@ -49,7 +60,8 @@ namespace AcceptanceTests
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
-            string tableName = typeof(TSagaDataType).Name + "_" + Guid.NewGuid();
+            var type = typeof(TSagaDataType);
+            string tableName = type.Name + "_" + (type.Namespace ?? "no.namespace").Replace(".", "_");
 
             modelBuilder.Entity<TSagaDataType>()
                 .ToTable(tableName);

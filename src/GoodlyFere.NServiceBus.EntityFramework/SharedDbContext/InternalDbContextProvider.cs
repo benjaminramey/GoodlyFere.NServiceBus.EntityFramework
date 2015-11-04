@@ -12,27 +12,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
 
         public ISagaDbContext GetSagaDbContext()
         {
-            return GetContextFromPipelineContext<ISagaDbContext>(ContextKeys.SagaDbContextKey);
-        }
+            Lazy<ISagaDbContext> context;
 
-        public ISubscriptionDbContext GetSubscriptionDbContext()
-        {
-            return GetContextFromPipelineContext<ISubscriptionDbContext>(ContextKeys.SubscriptionDbContextKey);
-        }
-
-        public ITimeoutDbContext GetTimeoutDbContext()
-        {
-            return GetContextFromPipelineContext<ITimeoutDbContext>(ContextKeys.TimeoutDbContextKey);
-        }
-
-        private TContext GetContextFromPipelineContext<TContext>(string contextKey)
-        {
-            Lazy<TContext> context;
-
-            bool foundContext = PipelineExecutor.CurrentContext.TryGet(contextKey, out context);
+            bool foundContext = PipelineExecutor.CurrentContext.TryGet(ContextKeys.SagaDbContextKey, out context);
             if (!foundContext)
             {
-                throw new CouldNotFindDbContextException(typeof(TContext).Name);
+                throw new CouldNotFindDbContextException(typeof(ISagaDbContext).Name);
             }
 
             return context.Value;

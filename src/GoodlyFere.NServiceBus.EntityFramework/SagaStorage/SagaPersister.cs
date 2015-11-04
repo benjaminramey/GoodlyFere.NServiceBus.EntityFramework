@@ -28,6 +28,7 @@ using System;
 using System.Collections;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Core.Objects.DataClasses;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
@@ -70,7 +71,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            Type sagaType = saga.GetType();
+            Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
@@ -78,8 +79,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             try
             {
-                DbEntityEntry entry = DbContext.Entry(saga);
                 DbSet set = DbContext.Set(sagaType);
+                DbEntityEntry entry = DbContext.Entry(saga);
 
                 if (entry.State == EntityState.Detached)
                 {
@@ -161,13 +162,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            Type sagaType = saga.GetType();
+            Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            DbContext.Set(sagaType).Add(saga);
+            DbSet sagaSet = DbContext.Set(sagaType);
+            sagaSet.Add(saga);
+
             DbContext.SaveChanges();
         }
 
@@ -178,23 +181,38 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentNullException("saga");
             }
 
-            Type sagaType = saga.GetType();
+            Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            object existingEnt = DbContext.Set(sagaType).Find(saga.Id);
+            DbSet dbSet = DbContext.Set(sagaType);
+            object existingEnt = dbSet.Find(saga.Id);
             if (existingEnt == null)
             {
                 throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
             }
-
+            
             DbEntityEntry entry = DbContext.Entry(existingEnt);
             entry.CurrentValues.SetValues(saga);
             entry.State = EntityState.Modified;
 
             DbContext.SaveChanges();
+        }
+
+        private static Type GetSagaType(IContainSagaData saga)
+        {
+            Type sagaType = saga.GetType();
+            
+            // if this class is the dynamic proxy type inserted by EF
+            // then we want the base type (actual saga data type) not the dynamic proxy
+            if (typeof(IEntityWithChangeTracker).IsAssignableFrom(sagaType))
+            {
+                sagaType = sagaType.BaseType;
+            }
+
+            return sagaType;
         }
     }
 }

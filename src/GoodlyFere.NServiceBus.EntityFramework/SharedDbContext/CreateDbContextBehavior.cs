@@ -23,46 +23,35 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
         public void Invoke(IncomingContext context, Action next)
         {
             bool alreadySetup;
-            if (context.TryGet(ContextKeys.SharedDbContextSetupFlagKey, out alreadySetup)
-                && alreadySetup)
+            bool hasAlreadySetupFlag = context.TryGet(ContextKeys.SharedDbContextSetupFlagKey, out alreadySetup);
+
+            if (hasAlreadySetupFlag && alreadySetup)
             {
                 next();
                 return;
             }
 
-            Lazy<ITimeoutDbContext> lazyTimeoutCreation = CreateLazyTimeoutDbContext(context);
             Lazy<ISagaDbContext> lazySagaCreation = CreateLazySagaDbContext(context);
-            Lazy<ISubscriptionDbContext> lazySubscriptionCreation = CreateLazySubscriptionDbContext(context);
-
-            context.Set(ContextKeys.TimeoutDbContextKey, lazyTimeoutCreation);
             context.Set(ContextKeys.SagaDbContextKey, lazySagaCreation);
-            context.Set(ContextKeys.SubscriptionDbContextKey, lazySubscriptionCreation);
+            context.Set(ContextKeys.SharedDbContextSetupFlagKey, true);
 
             try
             {
                 next();
-
-                FinishTransaction(context, ContextKeys.TimeoutTransactionKey);
-                FinishTransaction(context, ContextKeys.SagaTransactionKey);
-                FinishTransaction(context, ContextKeys.SubscriptionTransactionKey);
+                FinishTransaction(context);
             }
             catch (Exception)
             {
-                RollbackTransaction(context, ContextKeys.TimeoutTransactionKey);
-                RollbackTransaction(context, ContextKeys.SagaTransactionKey);
-                RollbackTransaction(context, ContextKeys.SubscriptionTransactionKey);
-
+                RollbackTransaction(context);
+                context.Remove(ContextKeys.SagaTransactionKey);
                 throw;
             }
             finally
             {
-                DisposeDbContext(lazyTimeoutCreation);
                 DisposeDbContext(lazySagaCreation);
-                DisposeDbContext(lazySubscriptionCreation);
 
-                context.Remove(ContextKeys.TimeoutDbContextKey);
                 context.Remove(ContextKeys.SagaDbContextKey);
-                context.Remove(ContextKeys.SubscriptionDbContextKey);
+                context.Remove(ContextKeys.SharedDbContextSetupFlagKey);
             }
         }
 
@@ -72,7 +61,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                 () =>
                 {
                     ISagaDbContext dbc = _dbContextFactory.CreateSagaDbContext();
-                    DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.RepeatableRead);
+                    DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.Serializable);
 
                     context.Set(ContextKeys.SagaTransactionKey, transaction);
 
@@ -80,38 +69,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                 };
 
             return new Lazy<ISagaDbContext>(lazyFunc);
-        }
-
-        private Lazy<ISubscriptionDbContext> CreateLazySubscriptionDbContext(IncomingContext context)
-        {
-            Func<ISubscriptionDbContext> lazyFunc =
-                () =>
-                {
-                    ISubscriptionDbContext dbc = _dbContextFactory.CreateSubscriptionDbContext();
-                    DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted);
-
-                    context.Set(ContextKeys.SubscriptionTransactionKey, transaction);
-
-                    return dbc;
-                };
-
-            return new Lazy<ISubscriptionDbContext>(lazyFunc);
-        }
-
-        private Lazy<ITimeoutDbContext> CreateLazyTimeoutDbContext(IncomingContext context)
-        {
-            Func<ITimeoutDbContext> lazyFunc =
-                () =>
-                {
-                    ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext();
-                    DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted);
-
-                    context.Set(ContextKeys.TimeoutTransactionKey, transaction);
-
-                    return dbc;
-                };
-
-            return new Lazy<ITimeoutDbContext>(lazyFunc);
         }
 
         private static void DisposeDbContext<TContext>(Lazy<TContext> lazyDbContextCreation)
@@ -123,29 +80,25 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
             }
         }
 
-        private static void FinishTransaction(
-            IncomingContext context,
-            string transactionKey)
+        private static void FinishTransaction(IncomingContext context)
         {
             DbContextTransaction transaction;
-            if (context.TryGet(transactionKey, out transaction))
+            if (context.TryGet(ContextKeys.SagaTransactionKey, out transaction))
             {
                 transaction.Commit();
                 transaction.Dispose();
 
-                context.Remove(transactionKey);
+                context.Remove(ContextKeys.SagaTransactionKey);
             }
         }
 
-        private void RollbackTransaction(IncomingContext context, string transactionKey)
+        private void RollbackTransaction(IncomingContext context)
         {
             DbContextTransaction transaction;
-            if (context.TryGet(transactionKey, out transaction))
+            if (context.TryGet(ContextKeys.SagaTransactionKey, out transaction))
             {
                 transaction.Rollback();
                 transaction.Dispose();
-
-                context.Remove(transactionKey);
             }
         }
 
