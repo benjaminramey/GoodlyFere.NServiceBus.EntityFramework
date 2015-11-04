@@ -23,7 +23,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
 
         public void Invoke(IncomingContext context, Action next)
         {
-            Lazy<ISagaDbContext> lazyDbContext = CreateLazySagaDbContext(context);
+            Lazy<ISagaDbContext> lazyDbContext;
+
+            if (context.TryGet(ContextKeys.SagaDbContextKey, out lazyDbContext))
+            {
+                next();
+                return;
+            }
+
+            lazyDbContext = CreateLazySagaDbContext(context);
             context.Set(ContextKeys.SagaDbContextKey, lazyDbContext);
 
             try
