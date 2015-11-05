@@ -26,6 +26,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Objects.DataClasses;
@@ -35,6 +36,7 @@ using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Exceptions;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
+using NServiceBus.Logging;
 using NServiceBus.Saga;
 
 #endregion
@@ -43,6 +45,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
     public class SagaPersister : ISagaPersister
     {
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(SagaPersister));
         private readonly IDbContextProvider _dbContextProvider;
         private ISagaDbContext _dbContext;
 
@@ -86,14 +89,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 {
                     set.Attach(saga);
                 }
-
+                
                 set.Remove(saga);
-
+                
                 DbContext.SaveChanges();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
-                // don't do anything, if we couldn't delete because it doesn't exist, that's OK
+                Logger.Error("DB update concurrency exception found", ex);
+                LogInnerExceptionChain(ex);
+                throw;
             }
         }
 
@@ -110,7 +115,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new ArgumentException("sagaId cannot be empty.", "sagaId");
             }
 
-            object result = DbContext.Set(sagaType).Find(sagaId);
+            DbSet set = DbContext.Set(sagaType);
+            object result = set.Find(sagaId);
             return (TSagaData)(result ?? default(TSagaData));
         }
 
@@ -134,7 +140,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Property(param, propertyName),
                     Expression.Constant(propertyValue)),
                 param);
-
+            
             IQueryable setQueryable = DbContext.Set(sagaType).AsQueryable();
             IQueryable result = setQueryable
                 .Provider
@@ -146,12 +152,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                         setQueryable.Expression,
                         Expression.Quote(filter)));
 
-            IEnumerator enumerator = result.GetEnumerator();
-            if (enumerator.MoveNext())
+            List<object> results = result.ToListAsync().Result;
+            if (results.Any())
             {
-                return (TSagaData)enumerator.Current;
+                return (TSagaData)results.First();
             }
-
+            
             return default(TSagaData);
         }
 
@@ -161,7 +167,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-
+            
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
@@ -170,7 +176,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             DbSet sagaSet = DbContext.Set(sagaType);
             sagaSet.Add(saga);
-
+            
             DbContext.SaveChanges();
         }
 
@@ -180,31 +186,49 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-
+            
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            DbSet dbSet = DbContext.Set(sagaType);
-            object existingEnt = dbSet.Find(saga.Id);
-            if (existingEnt == null)
+            try
             {
-                throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                DbSet dbSet = DbContext.Set(sagaType);
+                object existingEnt = dbSet.Find(saga.Id);
+                if (existingEnt == null)
+                {
+                    throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                }
+                
+                DbEntityEntry entry = DbContext.Entry(existingEnt);
+                entry.CurrentValues.SetValues(saga);
+                entry.State = EntityState.Modified;
+                
+                DbContext.SaveChanges();
             }
-            
-            DbEntityEntry entry = DbContext.Entry(existingEnt);
-            entry.CurrentValues.SetValues(saga);
-            entry.State = EntityState.Modified;
+            catch (Exception ex)
+            {
+                Logger.Error("Couldn't update saga.", ex);
+                LogInnerExceptionChain(ex);
+                throw;
+            }
+        }
 
-            DbContext.SaveChanges();
+        private static void LogInnerExceptionChain(Exception ex)
+        {
+            while (ex.InnerException != null)
+            {
+                Logger.Debug("Found inner exception", ex.InnerException);
+                ex = ex.InnerException;
+            }
         }
 
         private static Type GetSagaType(IContainSagaData saga)
         {
             Type sagaType = saga.GetType();
-            
+
             // if this class is the dynamic proxy type inserted by EF
             // then we want the base type (actual saga data type) not the dynamic proxy
             if (typeof(IEntityWithChangeTracker).IsAssignableFrom(sagaType))

@@ -48,10 +48,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                 if (lazyDbContext.IsValueCreated)
                 {
                     DisposeTransaction(context);
-
                     lazyDbContext.Value.Dispose();
                 }
-
+                
                 context.Remove(ContextKeys.SagaDbContextKey);
             }
         }
