@@ -39,7 +39,7 @@ namespace UnitTests.TimeoutStorage
         [Fact]
         public void Constructor_DoesNotThrow()
         {
-            Action action = () => new EntityFrameworkTimeoutStorage();
+            Action action = () => new EntityFrameworkTimeoutStorageFeature();
 
             action.Invoking(a => a.Invoke()).ShouldNotThrow();
         }

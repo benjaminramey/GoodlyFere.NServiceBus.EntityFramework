@@ -1,7 +1,7 @@
 ﻿#region License
 
 // --------------------------------------------------------------------------------------------------------------------
-// <copyright file="EntityFrameworkSagaStorage.cs">
+// <copyright file="EntityFrameworkSubscriptionStorage.cs">
 //  Copyright 2015 Benjamin S. Ramey
 // 
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,18 +31,18 @@ using NServiceBus.Features;
 
 #endregion
 
-namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
+namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 {
-    public class EntityFrameworkSagaStorage : Feature
+    public class EntityFrameworkSubscriptionStorageFeature : Feature
     {
-        public EntityFrameworkSagaStorage()
+        public EntityFrameworkSubscriptionStorageFeature()
         {
-            DependsOn<Sagas>();
+            DependsOn<StorageDrivenPublishing>();
         }
 
         protected override void Setup(FeatureConfigurationContext context)
         {
-            context.Container.ConfigureComponent<SagaPersister>(DependencyLifecycle.InstancePerCall);
+            context.Container.ConfigureComponent<SubscriptionPersister>(DependencyLifecycle.InstancePerCall);
         }
     }
 }

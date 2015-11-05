@@ -36,9 +36,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
     /// <summary>
     ///     EntityFramework timeout storage NServiceBus feature.
     /// </summary>
-    public class EntityFrameworkTimeoutStorage : Feature
+    public class EntityFrameworkTimeoutStorageFeature : Feature
     {
-        public EntityFrameworkTimeoutStorage()
+        public EntityFrameworkTimeoutStorageFeature()
         {
             DependsOn<TimeoutManager>();
         }

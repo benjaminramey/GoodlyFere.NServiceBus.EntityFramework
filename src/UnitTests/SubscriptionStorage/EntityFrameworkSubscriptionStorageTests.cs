@@ -39,7 +39,7 @@ namespace UnitTests.SubscriptionStorage
         [Fact]
         public void Constructor_DoesNotThrow()
         {
-            Action action = () => new EntityFrameworkSubscriptionStorage();
+            Action action = () => new EntityFrameworkSubscriptionStorageFeature();
 
             action.Invoking(a => a.Invoke()).ShouldNotThrow();
         }
