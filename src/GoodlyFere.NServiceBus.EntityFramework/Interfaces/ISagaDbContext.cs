@@ -34,6 +34,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.Interfaces
 {
     public interface ISagaDbContext : INServiceBusDbContext
     {
-        DbSet SagaSet(Type sagaDataType);
+        bool HasSet(Type entityType);
     }
 }

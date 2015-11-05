@@ -55,23 +55,33 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ContextKeys.cs" />
+    <Compile Include="Exceptions\CouldNotFindDbContextException.cs" />
+    <Compile Include="Exceptions\SagaDbSetMissingException.cs" />
     <Compile Include="Interfaces\INServiceBusDbContext.cs" />
     <Compile Include="Interfaces\INServiceBusDbContextFactory.cs" />
     <Compile Include="Interfaces\ISagaDbContext.cs" />
     <Compile Include="Interfaces\ISubscriptionDbContext.cs" />
     <Compile Include="Interfaces\ITimeoutDbContext.cs" />
     <Compile Include="InternalsVisibleTo.cs" />
-    <Compile Include="SagaStorage\EntityFrameworkSagaStorage.cs" />
+    <Compile Include="SagaStorage\EntityFrameworkSagaStorageFeature.cs" />
     <Compile Include="SagaStorage\SagaPersister.cs" />
-    <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorage.cs" />
+    <Compile Include="SharedConfig.cs" />
+    <Compile Include="SharedDbContext\CreateDbContextBehavior.cs" />
+    <Compile Include="SharedDbContext\NServiceBusDbContext.cs" />
+    <Compile Include="SharedDbContext\EntityFrameworkSharedDbContextFeature.cs" />
+    <Compile Include="SharedDbContext\IDbContextProvider.cs" />
+    <Compile Include="SharedDbContext\InternalDbContextProvider.cs" />
+    <Compile Include="SubscriptionStorage\EntityFrameworkSubscriptionStorageFeature.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionEntity.cs" />
     <Compile Include="SubscriptionStorage\SubscriptionPersister.cs" />
     <Compile Include="Support\CombGuid.cs" />
     <Compile Include="Support\SerializeHelper.cs" />
-    <Compile Include="TimeoutStorage\EntityFrameworkTimeoutStorage.cs" />
+    <Compile Include="TimeoutStorage\EntityFrameworkTimeoutStorageFeature.cs" />
     <Compile Include="TimeoutStorage\TimeoutPersister.cs" />
     <Compile Include="EntityFrameworkPersistence.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

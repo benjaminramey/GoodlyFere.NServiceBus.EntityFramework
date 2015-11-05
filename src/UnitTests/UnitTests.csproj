@@ -113,7 +113,12 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\GoodlyFere.NServiceBus.EntityFramework\GoodlyFere.NServiceBus.EntityFramework.csproj">
+      <Project>{95F5CD25-2298-4BE4-BAB4-25A1A4DE1B87}</Project>
+      <Name>GoodlyFere.NServiceBus.EntityFramework</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -26,7 +26,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using GoodlyFere.NServiceBus.EntityFramework.Support;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
@@ -72,7 +71,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                 Time = timeout.Time
             };
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 dbc.Timeouts.Add(timeoutEntity);
                 dbc.SaveChanges();
@@ -83,7 +82,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
         {
             DateTime now = DateTime.UtcNow;
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 List<TimeoutDataEntity> matchingTimeouts = dbc.Timeouts
                     .Where(
@@ -118,7 +117,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                 throw new ArgumentException("sagaId parameter cannot be empty.", "sagaId");
             }
 
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 var toDelete = dbc.Timeouts.Where(t => t.SagaId == sagaId);
                 dbc.Timeouts.RemoveRange(toDelete);
@@ -129,7 +128,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
         {
-            using (var dbc = _dbContextFactory.CreateTimeoutDbContext())
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));
 
@@ -152,9 +151,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
                 dbc.Timeouts.Remove(entity);
                 dbc.SaveChanges();
-
-                return true;
             }
+
+            return true;
         }
     }
 }
