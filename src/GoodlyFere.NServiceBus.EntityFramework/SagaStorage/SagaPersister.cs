@@ -29,8 +29,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Core;
 using System.Data.Entity.Core.Objects.DataClasses;
 using System.Data.Entity.Infrastructure;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Exceptions;
@@ -80,26 +82,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            try
+            DbEntityEntry entry = DbContext.Entry(saga);
+            if (entry.State == EntityState.Detached)
             {
-                DbSet set = DbContext.Set(sagaType);
-                DbEntityEntry entry = DbContext.Entry(saga);
+                throw new DeletingDetachedEntityException();
+            }
 
-                if (entry.State == EntityState.Detached)
-                {
-                    set.Attach(saga);
-                }
-                
-                set.Remove(saga);
-                
-                DbContext.SaveChanges();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                Logger.Error("DB update concurrency exception found", ex);
-                LogInnerExceptionChain(ex);
-                throw;
-            }
+            entry.Reload(); // avoid concurrency issues since we're deleting
+            entry.State = EntityState.Deleted;
+            DbContext.SaveChanges();
         }
 
         public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
@@ -140,7 +131,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Property(param, propertyName),
                     Expression.Constant(propertyValue)),
                 param);
-            
+
             IQueryable setQueryable = DbContext.Set(sagaType).AsQueryable();
             IQueryable result = setQueryable
                 .Provider
@@ -157,7 +148,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 return (TSagaData)results.First();
             }
-            
+
             return default(TSagaData);
         }
 
@@ -167,7 +158,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-            
+
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
@@ -176,7 +167,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             DbSet sagaSet = DbContext.Set(sagaType);
             sagaSet.Add(saga);
-            
             DbContext.SaveChanges();
         }
 
@@ -186,7 +176,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-            
+
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
@@ -195,33 +185,28 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             try
             {
-                DbSet dbSet = DbContext.Set(sagaType);
-                object existingEnt = dbSet.Find(saga.Id);
-                if (existingEnt == null)
+                DbEntityEntry entry = DbContext.Entry((object)saga);
+                if (entry.State == EntityState.Detached)
                 {
-                    throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
+                    throw new UpdatingDetachedEntityException();
                 }
-                
-                DbEntityEntry entry = DbContext.Entry(existingEnt);
-                entry.CurrentValues.SetValues(saga);
-                entry.State = EntityState.Modified;
-                
-                DbContext.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Couldn't update saga.", ex);
-                LogInnerExceptionChain(ex);
-                throw;
-            }
-        }
 
-        private static void LogInnerExceptionChain(Exception ex)
-        {
-            while (ex.InnerException != null)
+                if (entry.State == EntityState.Modified)
+                {
+                    DbContext.SaveChanges();
+                }
+            }
+            catch (DbUpdateConcurrencyException ex)
             {
-                Logger.Debug("Found inner exception", ex.InnerException);
-                ex = ex.InnerException;
+                if (IsOptimisticConcurrencyException(ex))
+                {
+                    ReconcileConcurrencyIssues(saga);
+                    DbContext.SaveChanges();
+                }
+                else
+                {
+                    throw;
+                }
             }
         }
 
@@ -237,6 +222,37 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             }
 
             return sagaType;
+        }
+
+        private static bool IsOptimisticConcurrencyException(DbUpdateConcurrencyException ex)
+        {
+            return ex.InnerException != null
+                   && ex.InnerException is OptimisticConcurrencyException;
+        }
+
+        private void ReconcileConcurrencyIssues(IContainSagaData saga)
+        {
+            DbEntityEntry entry = DbContext.Entry((object)saga);
+
+            // 1. get the names of properties that have changes.
+            List<string> changedPropertyNames = entry.OriginalValues.PropertyNames
+                .Where(pn => entry.OriginalValues[pn] != entry.CurrentValues[pn])
+                .ToList();
+
+            // 2. collect values of changed properties
+            Dictionary<string, object> changedValues = changedPropertyNames
+                .ToDictionary(pn => pn, pn => entry.CurrentValues[pn]);
+
+            // 3. reload values from database
+            entry.Reload();
+
+            // 4. resave only the changes values
+            foreach (var changedValue in changedValues)
+            {
+                var property = entry.Property(changedValue.Key);
+                property.CurrentValue = changedValue.Value;
+                property.IsModified = true;
+            }
         }
     }
 }
