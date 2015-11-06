@@ -80,26 +80,9 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            try
-            {
-                DbSet set = DbContext.Set(sagaType);
-                DbEntityEntry entry = DbContext.Entry(saga);
-
-                if (entry.State == EntityState.Detached)
-                {
-                    set.Attach(saga);
-                }
-                
-                set.Remove(saga);
-                
-                DbContext.SaveChanges();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                Logger.Error("DB update concurrency exception found", ex);
-                LogInnerExceptionChain(ex);
-                throw;
-            }
+            DbEntityEntry entry = DbContext.Entry(saga);
+            entry.State = EntityState.Deleted;
+            DbContext.SaveChanges();
         }
 
         public TSagaData Get<TSagaData>(Guid sagaId) where TSagaData : IContainSagaData
@@ -140,7 +123,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                     Expression.Property(param, propertyName),
                     Expression.Constant(propertyValue)),
                 param);
-            
+
             IQueryable setQueryable = DbContext.Set(sagaType).AsQueryable();
             IQueryable result = setQueryable
                 .Provider
@@ -157,7 +140,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 return (TSagaData)results.First();
             }
-            
+
             return default(TSagaData);
         }
 
@@ -167,7 +150,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-            
+
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
@@ -176,7 +159,6 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
             DbSet sagaSet = DbContext.Set(sagaType);
             sagaSet.Add(saga);
-            
             DbContext.SaveChanges();
         }
 
@@ -186,43 +168,16 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             {
                 throw new ArgumentNullException("saga");
             }
-            
+
             Type sagaType = GetSagaType(saga);
             if (!DbContext.HasSet(sagaType))
             {
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            try
-            {
-                DbSet dbSet = DbContext.Set(sagaType);
-                object existingEnt = dbSet.Find(saga.Id);
-                if (existingEnt == null)
-                {
-                    throw new Exception(string.Format("Could not find saga with ID {0}", saga.Id));
-                }
-                
-                DbEntityEntry entry = DbContext.Entry(existingEnt);
-                entry.CurrentValues.SetValues(saga);
-                entry.State = EntityState.Modified;
-                
-                DbContext.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Couldn't update saga.", ex);
-                LogInnerExceptionChain(ex);
-                throw;
-            }
-        }
-
-        private static void LogInnerExceptionChain(Exception ex)
-        {
-            while (ex.InnerException != null)
-            {
-                Logger.Debug("Found inner exception", ex.InnerException);
-                ex = ex.InnerException;
-            }
+            DbEntityEntry entry = DbContext.Entry((object)saga);
+            entry.State = EntityState.Modified;
+            DbContext.SaveChanges();
         }
 
         private static Type GetSagaType(IContainSagaData saga)
