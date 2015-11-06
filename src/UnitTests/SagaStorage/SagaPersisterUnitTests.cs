@@ -50,7 +50,7 @@ namespace UnitTests.SagaStorage
         {
             // arrange
             // act
-            Action action = () => _persister.Get<TestSagaData>(Guid.Empty);
+            Action action = () => _persister.Get<TestSagaDataWithRowVersion>(Guid.Empty);
 
             // assert
             action.ShouldThrow<ArgumentException>()
@@ -62,7 +62,7 @@ namespace UnitTests.SagaStorage
         {
             // arrange
             // act
-            Action action = () => _persister.Get<TestSagaData>(string.Empty, "something");
+            Action action = () => _persister.Get<TestSagaDataWithRowVersion>(string.Empty, "something");
 
             // assert
             action.ShouldThrow<ArgumentNullException>()
@@ -74,7 +74,7 @@ namespace UnitTests.SagaStorage
         {
             // arrange
             // act
-            Action action = () => _persister.Get<TestSagaData>(null, "something");
+            Action action = () => _persister.Get<TestSagaDataWithRowVersion>(null, "something");
 
             // assert
             action.ShouldThrow<ArgumentNullException>()
@@ -108,16 +108,16 @@ namespace UnitTests.SagaStorage
 
     internal class FakeTestSagaDataDbSet : DbSet
     {
-        private readonly List<TestSagaData> _set;
+        private readonly List<TestSagaDataWithRowVersion> _set;
 
         public FakeTestSagaDataDbSet()
         {
-            _set = new List<TestSagaData>();
+            _set = new List<TestSagaDataWithRowVersion>();
         }
 
         public override object Add(object entity)
         {
-            _set.Add((TestSagaData)entity);
+            _set.Add((TestSagaDataWithRowVersion)entity);
             return entity;
         }
     }

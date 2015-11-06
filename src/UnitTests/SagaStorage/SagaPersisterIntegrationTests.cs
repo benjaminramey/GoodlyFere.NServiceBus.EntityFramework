@@ -25,6 +25,7 @@
 #region Usings
 
 using System;
+using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using FluentAssertions;
 using System.Linq;
@@ -64,29 +65,66 @@ namespace UnitTests.SagaStorage
         public void Complete_ExistingSaga_DeletesSaga()
         {
             // arrange
-            TestSagaData sagaData = AddSaga();
+            TestSagaDataWithRowVersion sagaData = AddSagaWithRowVersion();
+            var persisterRetrievedSagaData = _persister.Get<TestSagaDataWithRowVersion>(sagaData.Id);
             using (var dbc = new TestDbContext())
             {
-                dbc.TestSagas.Find(sagaData.Id).Should().NotBeNull();
+                dbc.TestSagasWithRowVersion.Find(sagaData.Id).Should().NotBeNull();
             }
 
             // act
-            _persister.Complete(sagaData);
+            _persister.Complete(persisterRetrievedSagaData);
 
             // assert
             using (var dbContext = new TestDbContext())
             {
-                dbContext.TestSagas.Find(sagaData.Id).Should().BeNull();
+                dbContext.TestSagasWithRowVersion.Find(sagaData.Id).Should().BeNull();
             }
         }
+
         [Fact]
-        public void Complete_UpdatedSaga_DeletesSaga()
+        public void Complete_DetachedEntity_Throws()
         {
             // arrange
-            TestSagaData sagaData = AddSaga();
+            TestSagaData newSagaData = AddSaga();
+
+            // act
+            Action action = () => _persister.Complete(newSagaData);
+
+            // assert
+            action.ShouldThrow<DeletingDetachedEntityException>();
+        }
+
+        [Fact]
+        public void Complete_NonExistentSaga_ThrowsDbUpdateConcurrencyEx()
+        {
+            // arrange
+            var sagaData = AddSaga();
+            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(sagaData.Id);
             using (var dbc = new TestDbContext())
             {
-                TestSagaData foundSaga = dbc.TestSagas.Find(sagaData.Id);
+                var entry = dbc.Entry(sagaData);
+                entry.State = EntityState.Deleted;
+                dbc.SaveChanges();
+            }
+
+            // act
+            Action action = () => _persister.Complete(persisterRetrievedSagaData);
+
+            // assert
+            action.ShouldThrow<DbUpdateConcurrencyException>();
+        }
+
+        [Fact]
+        public void Complete_UpdatedSagaWithRowVersion_DeletesSaga()
+        {
+            // arrange
+            TestSagaDataWithRowVersion sagaData = AddSagaWithRowVersion();
+            var persisterRetrievedSagaData = _persister.Get<TestSagaDataWithRowVersion>(sagaData.Id);
+
+            using (var dbc = new TestDbContext())
+            {
+                TestSagaDataWithRowVersion foundSaga = dbc.TestSagasWithRowVersion.Find(sagaData.Id);
                 foundSaga.Should().NotBeNull();
 
                 foundSaga.SomeProp1 = Guid.NewGuid().ToString(); // update prop
@@ -94,37 +132,48 @@ namespace UnitTests.SagaStorage
             }
 
             // act
-            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(sagaData.Id);
             _persister.Complete(persisterRetrievedSagaData);
 
             // assert
             using (var dbContext = new TestDbContext())
             {
-                dbContext.TestSagas.Find(sagaData.Id).Should().BeNull();
+                dbContext.TestSagasWithRowVersion.Find(sagaData.Id).Should().BeNull();
             }
         }
-
         [Fact]
-        public void Complete_NonExistentSaga_ThrowsDbUpdateConcurrencyEx()
+        public void Complete_UpdatedSagaWithoutARowVersion_DeletesSaga()
         {
             // arrange
-            var sagaData = new TestSagaData();
+            TestSagaData sagaData = AddSaga();
+            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(sagaData.Id);
+
+            using (var dbc = new TestDbContext())
+            {
+                TestSagaData foundSaga = dbc.TestSagaDatas.Find(sagaData.Id);
+                foundSaga.Should().NotBeNull();
+
+                foundSaga.SomeProp1 = Guid.NewGuid().ToString(); // update prop
+                dbc.SaveChanges();
+            }
 
             // act
-            Action action = () => _persister.Complete(sagaData);
+            _persister.Complete(persisterRetrievedSagaData);
 
             // assert
-            action.ShouldThrow<DbUpdateConcurrencyException>();
+            using (var dbContext = new TestDbContext())
+            {
+                dbContext.TestSagaDatas.Find(sagaData.Id).Should().BeNull();
+            }
         }
 
         [Fact]
         public void Get_Id_GetsSaga()
         {
             // arrange
-            TestSagaData sagaData = AddSaga();
+            TestSagaDataWithRowVersion sagaData = AddSagaWithRowVersion();
 
             // act
-            TestSagaData retrievedSaga = _persister.Get<TestSagaData>(sagaData.Id);
+            TestSagaDataWithRowVersion retrievedSaga = _persister.Get<TestSagaDataWithRowVersion>(sagaData.Id);
 
             // assert
             sagaData.ShouldBeEquivalentTo(retrievedSaga);
@@ -134,7 +183,7 @@ namespace UnitTests.SagaStorage
         public void GetByProp_GetsSaga()
         {
             // arrange
-            var sagaData = new TestSagaData
+            var sagaData = new TestSagaDataWithRowVersion
             {
                 Id = Guid.NewGuid(),
                 Originator = "originator yeah",
@@ -144,12 +193,14 @@ namespace UnitTests.SagaStorage
             };
             using (var dbContext = new TestDbContext())
             {
-                dbContext.TestSagas.Add(sagaData);
+                dbContext.TestSagasWithRowVersion.Add(sagaData);
                 dbContext.SaveChanges();
             }
 
             // act
-            TestSagaData retrievedSaga = _persister.Get<TestSagaData>("SomeProp1", sagaData.SomeProp1);
+            TestSagaDataWithRowVersion retrievedSaga = _persister.Get<TestSagaDataWithRowVersion>(
+                "SomeProp1",
+                sagaData.SomeProp1);
 
             // assert
             sagaData.ShouldBeEquivalentTo(retrievedSaga);
@@ -160,7 +211,7 @@ namespace UnitTests.SagaStorage
         {
             // arrange
             // act
-            Action action = () => _persister.Get<TestSagaData>("non-existent property name", "bob");
+            Action action = () => _persister.Get<TestSagaDataWithRowVersion>("non-existent property name", "bob");
 
             // assert
             action.ShouldThrow<ArgumentException>();
@@ -172,12 +223,12 @@ namespace UnitTests.SagaStorage
             // arrange
             using (var dbContext = new TestDbContext())
             {
-                dbContext.TestSagas.RemoveRange(dbContext.TestSagas);
+                dbContext.TestSagasWithRowVersion.RemoveRange(dbContext.TestSagasWithRowVersion);
                 dbContext.SaveChanges();
             }
 
             // act
-            TestSagaData result = _persister.Get<TestSagaData>("SomeProp1", "some value");
+            TestSagaDataWithRowVersion result = _persister.Get<TestSagaDataWithRowVersion>("SomeProp1", "some value");
 
             // assert
             result.Should().BeNull();
@@ -187,7 +238,7 @@ namespace UnitTests.SagaStorage
         public void Save_ShouldSaveSaga()
         {
             // arrange
-            var sagaData = new TestSagaData
+            var sagaData = new TestSagaDataWithRowVersion
             {
                 Id = Guid.NewGuid(),
                 Originator = "originator yeah",
@@ -202,66 +253,38 @@ namespace UnitTests.SagaStorage
             // assert
             using (var dbc = new TestDbContext())
             {
-                TestSagaData fromDb = dbc.TestSagas.Find(sagaData.Id);
+                TestSagaDataWithRowVersion fromDb = dbc.TestSagasWithRowVersion.Find(sagaData.Id);
                 fromDb.ShouldBeEquivalentTo(sagaData);
             }
         }
 
         [Fact]
-        public void Update_NonExistentSaga_Throws()
+        public void Update_DbChangedEntityWithRowVersion_ShouldSaveSaga()
         {
             // arrange
-            var saga = new TestSagaData
-            {
-                Id = Guid.NewGuid()
-            };
-
-            // act
-            Action action = () => _persister.Update(saga);
-
-            // assert
-            action.ShouldThrow<Exception>();
-        }
-
-        [Fact]
-        public void Update_DetachedEntity_Throws()
-        {
-            // arrange
-            TestSagaData newSagaData = AddSaga();
-
-            // act
-            Action action = () => _persister.Update(newSagaData);
-
-            // assert
-            action.ShouldThrow<UpdatingDetachedEntityException>();
-        }
-
-        [Fact]
-        public void Update_DbChangedEntity_ShouldSaveSaga()
-        {
-            // arrange
-            TestSagaData newSagaData = AddSaga();
+            TestSagaDataWithRowVersion newSagaData = AddSagaWithRowVersion();
             string expectedSomeProp1 = Guid.NewGuid().ToString();
             string expectedSomeProp2 = Guid.NewGuid().ToString();
-            
+
+            var persisterRetrievedSagaData = _persister.Get<TestSagaDataWithRowVersion>(newSagaData.Id);
+
             // simulates another worker updating the saga after "this" saga retrieves it's saga
             using (var dbc = new TestDbContext())
             {
-                var fromDb = dbc.TestSagas.Find(newSagaData.Id);
+                var fromDb = dbc.TestSagasWithRowVersion.Find(newSagaData.Id);
                 fromDb.SomeProp1 = expectedSomeProp1;
                 dbc.SaveChanges();
             }
 
             // act
-            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(newSagaData.Id);
             persisterRetrievedSagaData.SomeProp2 = expectedSomeProp2;
             _persister.Update(persisterRetrievedSagaData);
 
             // assert
             using (var dbc = new TestDbContext())
             {
-                var fromDb = dbc.TestSagas.Find(newSagaData.Id);
-                
+                var fromDb = dbc.TestSagasWithRowVersion.Find(newSagaData.Id);
+
                 fromDb.Id.Should().Be(newSagaData.Id);
                 fromDb.OriginalMessageId.Should().Be(newSagaData.OriginalMessageId);
                 fromDb.Originator.Should().Be(newSagaData.Originator);
@@ -272,20 +295,90 @@ namespace UnitTests.SagaStorage
         }
 
         [Fact]
+        public void Update_DbChangedEntityWithoutARowVersion__ShouldSaveSaga()
+        {
+            // arrange
+            TestSagaData newSagaData = AddSaga();
+            string expectedSomeProp1 = Guid.NewGuid().ToString();
+            string expectedSomeProp2 = Guid.NewGuid().ToString();
+
+            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(newSagaData.Id);
+
+            // simulates another worker updating the saga after "this" saga retrieves it's saga
+            using (var dbc = new TestDbContext())
+            {
+                var fromDb = dbc.TestSagaDatas.Find(newSagaData.Id);
+                fromDb.SomeProp1 = expectedSomeProp1;
+                dbc.SaveChanges();
+            }
+
+            // act
+            persisterRetrievedSagaData.SomeProp2 = expectedSomeProp2;
+            _persister.Update(persisterRetrievedSagaData);
+
+            // assert
+            using (var dbc = new TestDbContext())
+            {
+                var fromDb = dbc.TestSagaDatas.Find(newSagaData.Id);
+
+                fromDb.Id.Should().Be(newSagaData.Id);
+                fromDb.OriginalMessageId.Should().Be(newSagaData.OriginalMessageId);
+                fromDb.Originator.Should().Be(newSagaData.Originator);
+
+                fromDb.SomeProp1.Should().Be(expectedSomeProp1);
+                fromDb.SomeProp2.Should().Be(expectedSomeProp2);
+            }
+        }
+
+        [Fact]
+        public void Update_DetachedEntity_Throws()
+        {
+            // arrange
+            TestSagaDataWithRowVersion newSagaData = AddSagaWithRowVersion();
+
+            // act
+            Action action = () => _persister.Update(newSagaData);
+
+            // assert
+            action.ShouldThrow<UpdatingDetachedEntityException>();
+        }
+
+        [Fact]
+        public void Update_NonExistentSaga_DoesNothing()
+        {
+            // arrange
+            var sagaData = AddSaga();
+            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(sagaData.Id);
+
+            using (var dbc = new TestDbContext())
+            {
+                var entry = dbc.Entry(sagaData);
+                entry.State = EntityState.Deleted;
+                dbc.SaveChanges();
+            }
+
+            // act
+            Action action = () => _persister.Update(persisterRetrievedSagaData);
+
+            // assert
+            action.ShouldNotThrow();
+        }
+
+        [Fact]
         public void Update_ShouldSaveSaga()
         {
             // arrange
-            TestSagaData sagaData = AddSaga();
+            TestSagaDataWithRowVersion sagaData = AddSagaWithRowVersion();
 
             // act
-            var persisterRetrievedSagaData = _persister.Get<TestSagaData>(sagaData.Id);
+            var persisterRetrievedSagaData = _persister.Get<TestSagaDataWithRowVersion>(sagaData.Id);
             persisterRetrievedSagaData.SomeProp1 = "some other value";
             _persister.Update(persisterRetrievedSagaData);
 
             // assert
             using (var dbc = new TestDbContext())
             {
-                var fromDb = dbc.TestSagas.Find(sagaData.Id);
+                var fromDb = dbc.TestSagasWithRowVersion.Find(sagaData.Id);
                 fromDb.ShouldBeEquivalentTo(persisterRetrievedSagaData);
             }
         }
@@ -302,7 +395,25 @@ namespace UnitTests.SagaStorage
             };
             using (var dbContext = new TestDbContext())
             {
-                dbContext.TestSagas.Add(sagaData);
+                dbContext.TestSagaDatas.Add(sagaData);
+                dbContext.SaveChanges();
+            }
+            return sagaData;
+        }
+
+        private static TestSagaDataWithRowVersion AddSagaWithRowVersion()
+        {
+            var sagaData = new TestSagaDataWithRowVersion
+            {
+                Id = Guid.NewGuid(),
+                Originator = "originator yeah",
+                OriginalMessageId = "original message id",
+                SomeProp1 = "some prop 1",
+                SomeProp2 = "somep prop 2"
+            };
+            using (var dbContext = new TestDbContext())
+            {
+                dbContext.TestSagasWithRowVersion.Add(sagaData);
                 dbContext.SaveChanges();
             }
             return sagaData;

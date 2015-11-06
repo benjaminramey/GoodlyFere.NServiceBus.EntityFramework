@@ -83,6 +83,12 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             }
 
             DbEntityEntry entry = DbContext.Entry(saga);
+            if (entry.State == EntityState.Detached)
+            {
+                throw new DeletingDetachedEntityException();
+            }
+
+            entry.Reload(); // avoid concurrency issues since we're deleting
             entry.State = EntityState.Deleted;
             DbContext.SaveChanges();
         }
