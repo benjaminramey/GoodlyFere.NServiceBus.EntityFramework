@@ -25,6 +25,7 @@
 #region Usings
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
@@ -40,15 +41,28 @@ namespace UnitTests
         public TestDbContext()
             : base("TestDbContext")
         {
+            Database.SetInitializer(new CreateDatabaseIfNotExists<TestDbContext>());
         }
 
         public DbSet<TestSagaData> TestSagas { get; set; }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<TestSagaData>()
+                .ToTable("UnitTests_TestSagaDatas");
+
+            base.OnModelCreating(modelBuilder);
+        }
     }
 
     public class TestSagaData : IContainSagaData
     {
         public string SomeProp1 { get; set; }
         public string SomeProp2 { get; set; }
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
         public Guid Id { get; set; }
         public string OriginalMessageId { get; set; }
         public string Originator { get; set; }

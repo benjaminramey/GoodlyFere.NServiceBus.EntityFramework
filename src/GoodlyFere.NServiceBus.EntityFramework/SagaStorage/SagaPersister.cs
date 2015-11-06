@@ -29,8 +29,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Core;
 using System.Data.Entity.Core.Objects.DataClasses;
 using System.Data.Entity.Infrastructure;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Linq.Expressions;
 using GoodlyFere.NServiceBus.EntityFramework.Exceptions;
@@ -175,9 +177,31 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
                 throw new SagaDbSetMissingException(DbContext.GetType(), sagaType);
             }
 
-            DbEntityEntry entry = DbContext.Entry((object)saga);
-            entry.State = EntityState.Modified;
-            DbContext.SaveChanges();
+            try
+            {
+                DbEntityEntry entry = DbContext.Entry((object)saga);
+                if (entry.State == EntityState.Detached)
+                {
+                    throw new UpdatingDetachedEntityException();
+                }
+
+                if (entry.State == EntityState.Modified)
+                {
+                    DbContext.SaveChanges();
+                }
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (IsOptimisticConcurrencyException(ex))
+                {
+                    ReconcileConcurrencyIssues(saga);
+                    DbContext.SaveChanges();
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         private static Type GetSagaType(IContainSagaData saga)
@@ -192,6 +216,37 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
             }
 
             return sagaType;
+        }
+
+        private static bool IsOptimisticConcurrencyException(DbUpdateConcurrencyException ex)
+        {
+            return ex.InnerException != null
+                   && ex.InnerException is OptimisticConcurrencyException;
+        }
+
+        private void ReconcileConcurrencyIssues(IContainSagaData saga)
+        {
+            DbEntityEntry entry = DbContext.Entry((object)saga);
+
+            // 1. get the names of properties that have changes.
+            List<string> changedPropertyNames = entry.OriginalValues.PropertyNames
+                .Where(pn => entry.OriginalValues[pn] != entry.CurrentValues[pn])
+                .ToList();
+
+            // 2. collect values of changed properties
+            Dictionary<string, object> changedValues = changedPropertyNames
+                .ToDictionary(pn => pn, pn => entry.CurrentValues[pn]);
+
+            // 3. reload values from database
+            entry.Reload();
+
+            // 4. resave only the changes values
+            foreach (var changedValue in changedValues)
+            {
+                var property = entry.Property(changedValue.Key);
+                property.CurrentValue = changedValue.Value;
+                property.IsModified = true;
+            }
         }
     }
 }
