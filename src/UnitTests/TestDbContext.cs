@@ -25,7 +25,9 @@
 #region Usings
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using NServiceBus;
@@ -40,15 +42,44 @@ namespace UnitTests
         public TestDbContext()
             : base("TestDbContext")
         {
+            Database.Log = s => File.AppendAllText("dbcontext.log", s);
+
+            Database.SetInitializer(new CreateDatabaseIfNotExists<TestDbContext>());
+
         }
 
-        public DbSet<TestSagaData> TestSagas { get; set; }
+        public DbSet<TestSagaDataWithRowVersion> TestSagasWithRowVersion { get; set; }
+        public DbSet<TestSagaData> TestSagaDatas { get; set; }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<TestSagaDataWithRowVersion>()
+                .ToTable("UnitTests_TestSagaDatasWithRowVersion");
+            modelBuilder.Entity<TestSagaData>()
+                .ToTable("UnitTests_TestSagaDatas");
+
+            base.OnModelCreating(modelBuilder);
+        }
+    }
+
+    public class TestSagaDataWithRowVersion : IContainSagaData
+    {
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
+        public string SomeProp1 { get; set; }
+        public string SomeProp2 { get; set; }
+
+        public Guid Id { get; set; }
+        public string OriginalMessageId { get; set; }
+        public string Originator { get; set; }
     }
 
     public class TestSagaData : IContainSagaData
     {
         public string SomeProp1 { get; set; }
         public string SomeProp2 { get; set; }
+
         public Guid Id { get; set; }
         public string OriginalMessageId { get; set; }
         public string Originator { get; set; }
