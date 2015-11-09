@@ -39,6 +39,7 @@ this library provides you.
 The internal persisters in this library depend on an interface of type `INServiceBusDbContextFactory` that 
 _you_ must implement in your client code.
 
+##### Implementation
 The definition of this interface is very simple.
 
 	
@@ -55,6 +56,23 @@ Each method is intended to return an instance of an EntityFramework `DbContext` 
 database in which you want to store Saga data, subscriptions and timeouts.
 
 Each interface defines the methods or properties that your `DbContext` must implement.
+
+##### Container Registration
+You must also register your implementation of `INServiceBusDbContextFactory`
+with the dependency injection framework that you have configured for NServiceBus.
+
+If you are using the default container with NServiceBus, your registration
+may look something like this.
+
+	public class EndpointConfig
+    {
+        public void Customize(BusConfiguration configuration)
+        {
+            configuration.RegisterComponents(c => c.ConfigureComponent<MyNServiceBusDbContextFactory>(DependencyLifecycle.SingleInstance));
+			
+            configuration.UsePersistence<EntityFrameworkPersistence>();
+        }
+    }
 
 #### DbContext
 You can have three different `DbContext`s (one for each interface that the
@@ -114,10 +132,6 @@ defining your custom saga data `DbSet<>` properties.
         public virtual DbSet<SubscriptionEntity> Subscriptions { get; set; }
         public virtual DbSet<TimeoutDataEntity> Timeouts { get; set; }
     }
-
-### Registration
-You must then register your implementation of `INServiceBusDbContextFactory` with the dependency injection
-framework that you have configured for NServiceBus.
 
 ## Version History
  - 1.0: Initial release to NuGet.  Stable use in production for timeout, subscription and saga data storage.
