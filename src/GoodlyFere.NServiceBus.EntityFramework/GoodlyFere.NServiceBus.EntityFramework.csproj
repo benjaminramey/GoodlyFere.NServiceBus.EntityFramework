@@ -109,24 +109,26 @@
         <Error Condition="!Exists('..\packages\NuGetPackager.0.5.5\build\NuGetPackager.targets')"
                Text="$([System.String]::Format('$(ErrorText)', '..\packages\NuGetPackager.0.5.5\build\NuGetPackager.targets'))" />
     </Target>
-	  <PropertyGroup>
-		<BuildDependsOn>
-		  $(BuildDependsOn);
-			TranslateNugetVersion
-		</BuildDependsOn>
-	  </PropertyGroup>
+    <Target Name="TranslateNugetVersion"
+            Condition="'$(Configuration)' == 'Release'">
+        <CreateProperty
+            Value="$(GitVersion_NuGetVersion)">
+            <Output
+                TaskParameter="Value"
+                PropertyName="GfvNuGetVersion" />
+        </CreateProperty>
+    </Target>
+    <PropertyGroup>
+        <BuildDependsOn>
+            $(BuildDependsOn);
+            TranslateNugetVersion
+        </BuildDependsOn>
+    </PropertyGroup>
     <Import Project="..\packages\GitVersionTask.3.4.1\Build\dotnet\GitVersionTask.targets"
             Condition="Exists('..\packages\GitVersionTask.3.4.1\Build\dotnet\GitVersionTask.targets')" />
     <Import Project="..\packages\NuGetPackager.0.5.5\build\NuGetPackager.targets"
             Condition="Exists('..\packages\NuGetPackager.0.5.5\build\NuGetPackager.targets')" />
-  <Target Name="TranslateNugetVersion" Condition="'$(Configuration)' == 'Release'">
-	<CreateProperty
-		Value="$(GitVersion_NuGetVersion)">
-		<Output
-			TaskParameter="Value"
-			PropertyName="GfvNuGetVersion" />
-	</CreateProperty>
-  </Target>
+
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
