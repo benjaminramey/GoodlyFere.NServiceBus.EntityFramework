@@ -42,7 +42,7 @@ namespace UnitTests
         public TestDbContext()
             : base("TestDbContext")
         {
-            Database.Log = s => File.AppendAllText("dbcontext.log", s);
+            //Database.Log = s => File.AppendAllText("dbcontext.log", s);
 
             Database.SetInitializer(new CreateDatabaseIfNotExists<TestDbContext>());
 
