@@ -36,7 +36,7 @@ using NServiceBus.Timeout.Core;
 
 namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 {
-    public class TimeoutPersister : IPersistTimeouts
+    public class TimeoutPersister : IPersistTimeouts, IPersistTimeoutsV2
     {
         private readonly INServiceBusDbContextFactory _dbContextFactory;
 
@@ -110,6 +110,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
             }
         }
 
+        public TimeoutData Peek(string timeoutId)
+        {
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
+            {
+                TimeoutDataEntity entity = dbc.Timeouts.Find(Guid.Parse(timeoutId));                
+                return MapToTimeoutData(entity);
+            }
+        }
+
         public void RemoveTimeoutBy(Guid sagaId)
         {
             if (sagaId == Guid.Empty)
@@ -126,6 +135,20 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
             }
         }
 
+        public bool TryRemove(string timeoutId)
+        {
+            using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
+            {
+                Guid timeoutGuid = Guid.Parse(timeoutId);
+
+                int timeoutCount = dbc.Timeouts
+                    .Where(t => t.Id == timeoutGuid)
+                    .Count();
+
+                return timeoutCount > 0;
+            }
+        }
+
         public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
         {
             using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
@@ -138,22 +161,33 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
                     return false;
                 }
 
-                timeoutData = new TimeoutData
-                {
-                    Destination = Address.Parse(entity.Destination),
-                    Headers = entity.Headers.ToDictionary(),
-                    Id = entity.Id.ToString(),
-                    OwningTimeoutManager = entity.Endpoint,
-                    SagaId = entity.SagaId,
-                    State = entity.State,
-                    Time = entity.Time
-                };
-
+                timeoutData = MapToTimeoutData(entity);
                 dbc.Timeouts.Remove(entity);
                 dbc.SaveChanges();
             }
 
             return true;
+        }
+
+        private TimeoutData MapToTimeoutData(TimeoutDataEntity entity)
+        {
+            if (entity == null)
+            {
+                return null;
+            }
+
+            TimeoutData timeoutData = new TimeoutData
+            {
+                Destination = Address.Parse(entity.Destination),
+                Headers = entity.Headers.ToDictionary(),
+                Id = entity.Id.ToString(),
+                OwningTimeoutManager = entity.Endpoint,
+                SagaId = entity.SagaId,
+                State = entity.State,
+                Time = entity.Time
+            };
+
+            return timeoutData;
         }
     }
 }
