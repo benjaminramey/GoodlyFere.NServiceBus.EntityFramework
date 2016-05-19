@@ -140,13 +140,18 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
             using (ITimeoutDbContext dbc = _dbContextFactory.CreateTimeoutDbContext())
             {
                 Guid timeoutGuid = Guid.Parse(timeoutId);
+                TimeoutDataEntity entity = dbc.Timeouts.Find(timeoutGuid);
 
-                int timeoutCount = dbc.Timeouts
-                    .Where(t => t.Id == timeoutGuid)
-                    .Count();
+                if (entity == null)
+                {
+                    return false;
+                }
 
-                return timeoutCount > 0;
+                dbc.Timeouts.Remove(entity);
+                dbc.SaveChanges();
             }
+
+            return true;
         }
 
         public bool TryRemove(string timeoutId, out TimeoutData timeoutData)
