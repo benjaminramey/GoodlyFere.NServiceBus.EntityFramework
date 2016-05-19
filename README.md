@@ -7,7 +7,7 @@ This is a plugin for NServiceBus to use EntityFramework for your persistence lay
  - Timeout Storage
 
 ## Installation
-    PM> Install-Package GoodlyFere.NServiceBus.EntityFramework -Pre
+    PM> Install-Package GoodlyFere.NServiceBus.EntityFramework
 
 ## Usage
 The first step in using EntityFramework persistence is to configure your bus endpoint to use
