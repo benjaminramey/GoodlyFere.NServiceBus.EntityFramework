@@ -134,6 +134,8 @@ defining your custom saga data `DbSet<>` properties.
     }
 
 ## Version History
+ - 1.4: Fix TryRemove in timeouts persister to actually try to remove timeouts (duh!!)
+ - 1.3: Implement TimeoutV2 interface
  - 1.2: Corrections to implementation of Saga concurrency and use of DbContext in saving, deleting and updated entities.
  - 1.1: Saga concurrency updates, use of pipeline to create and dispose saga DbContexts.
  - 1.0: Initial release to NuGet.  Stable use in production for timeout, subscription and saga data storage.
