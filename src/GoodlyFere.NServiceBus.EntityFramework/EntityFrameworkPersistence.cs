@@ -31,6 +31,7 @@ using GoodlyFere.NServiceBus.EntityFramework.SharedDbContext;
 using GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage;
 using GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage;
 using NServiceBus.Features;
+using NServiceBus.Logging;
 using NServiceBus.Persistence;
 using NServiceBus.Settings;
 
@@ -43,11 +44,15 @@ namespace GoodlyFere.NServiceBus.EntityFramework
     /// </summary>
     public class EntityFrameworkPersistence : PersistenceDefinition
     {
+        private static readonly ILog Logger = LogManager.GetLogger<EntityFrameworkPersistence>();
+
         /// <summary>
         ///     Defines the capabilities of the storage
         /// </summary>
         public EntityFrameworkPersistence()
         {
+            Logger.Debug("Initiating EntityFrameworkPersistence");
+
             Defaults(
                 s =>
                 {
@@ -61,16 +66,19 @@ namespace GoodlyFere.NServiceBus.EntityFramework
 
         private void SetupSagasSettings(SettingsHolder s)
         {
+            Logger.Debug("Enabling EntityFramework saga storage");
             s.EnableFeatureByDefault<EntityFrameworkSagaStorageFeature>();
         }
 
         private void SetupSubscriptionSettings(SettingsHolder s)
         {
+            Logger.Debug("Enabling EntityFramework subscription storage");
             s.EnableFeatureByDefault<EntityFrameworkSubscriptionStorageFeature>();
         }
 
         private void SetupTimeoutSettings(SettingsHolder s)
         {
+            Logger.Debug("Enabling EntityFramework timeout storage");
             s.EnableFeatureByDefault<EntityFrameworkTimeoutStorageFeature>();
         }
     }

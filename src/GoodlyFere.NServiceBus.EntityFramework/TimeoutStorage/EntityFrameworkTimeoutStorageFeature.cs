@@ -28,6 +28,7 @@ using System;
 using System.Linq;
 using NServiceBus;
 using NServiceBus.Features;
+using NServiceBus.Logging;
 
 #endregion
 
@@ -38,6 +39,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
     /// </summary>
     public class EntityFrameworkTimeoutStorageFeature : Feature
     {
+        private static readonly ILog Logger = LogManager.GetLogger<EntityFrameworkTimeoutStorageFeature>();
         public EntityFrameworkTimeoutStorageFeature()
         {
             DependsOn<TimeoutManager>();
@@ -45,6 +47,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.TimeoutStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
+            Logger.Debug("Configuring TimeoutPersister component with InstancePerCall lifecycle.");
+
             context.Container
                 .ConfigureComponent<TimeoutPersister>(DependencyLifecycle.InstancePerCall)
                 .ConfigureProperty(p => p.EndpointName, context.Settings.EndpointName());
