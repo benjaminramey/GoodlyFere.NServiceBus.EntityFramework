@@ -28,6 +28,7 @@ using System;
 using System.Linq;
 using NServiceBus;
 using NServiceBus.Features;
+using NServiceBus.Logging;
 
 #endregion
 
@@ -35,6 +36,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 {
     public class EntityFrameworkSubscriptionStorageFeature : Feature
     {
+        private static readonly ILog Logger = LogManager.GetLogger<EntityFrameworkSubscriptionStorageFeature>();
+
         public EntityFrameworkSubscriptionStorageFeature()
         {
             DependsOn<StorageDrivenPublishing>();
@@ -42,6 +45,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
+            Logger.Debug("Configuring SubscriptionPersister component with InstancePerCall lifecycle.");
             context.Container.ConfigureComponent<SubscriptionPersister>(DependencyLifecycle.InstancePerCall);
         }
     }

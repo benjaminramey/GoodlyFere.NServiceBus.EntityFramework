@@ -31,6 +31,7 @@ using System.Data.Entity;
 using System.Linq;
 using GoodlyFere.NServiceBus.EntityFramework.Interfaces;
 using NServiceBus;
+using NServiceBus.Logging;
 using NServiceBus.Unicast.Subscriptions;
 using NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions;
 
@@ -40,6 +41,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 {
     public class SubscriptionPersister : ISubscriptionStorage
     {
+        private static readonly ILog Logger = LogManager.GetLogger<SubscriptionPersister>();
         private readonly INServiceBusDbContextFactory _dbContextFactory;
 
         public SubscriptionPersister(INServiceBusDbContextFactory dbContextFactory)
@@ -54,48 +56,65 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public IEnumerable<Address> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes)
         {
+            Logger.Debug("Getting subscriber addresses for message types");
+
             if (messageTypes == null)
             {
+                Logger.Debug("Message types are null! Throwing argument null exception.");
                 throw new ArgumentNullException("messageTypes");
             }
+
+            MessageType[] mtArray = messageTypes as MessageType[] ?? messageTypes.ToArray();
+            if (!mtArray.Any())
+            {
+                Logger.Debug("Message types list is empty, returning empty address list.");
+                return new List<Address>();
+            }
+
+            List<string> messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
+            Logger.DebugFormat(
+                "Message types are {0}.",
+                string.Join(",", messageTypeStrings));
 
             using (ISubscriptionDbContext dbc = _dbContextFactory.CreateSubscriptionDbContext())
             using (DbContextTransaction transaction = dbc.Database.BeginTransaction(IsolationLevel.ReadCommitted))
             {
-                MessageType[] mtArray = messageTypes as MessageType[] ?? messageTypes.ToArray();
-                if (!mtArray.Any())
-                {
-                    return new List<Address>();
-                }
-                var messageTypeStrings = mtArray.Select(mt => mt.ToString()).ToList();
+                Logger.Debug("Querying for subscriptions with message types.");
                 var subscriptions = dbc.Subscriptions
                     .Where(s => messageTypeStrings.Contains(s.MessageType))
                     .ToList();
+                Logger.DebugFormat("{0} subscription(s) found.", subscriptions.Count);
 
+                Logger.Debug("Getting addresses for found subscriptions.");
                 List<Address> results = subscriptions
                     .Select(s => Address.Parse(s.SubscriberEndpoint))
                     .Distinct()
                     .ToList();
 
+                Logger.Debug("Committing transaction and returning addresses.");
                 transaction.Commit();
-
                 return results;
             }
         }
 
         public void Init()
         {
+            Logger.Debug("Doing nothing in Init.");
         }
 
         public void Subscribe(Address client, IEnumerable<MessageType> messageTypes)
         {
+            Logger.Debug("Subscribe called");
+
             if (client == null)
             {
+                Logger.Debug("Client is null!  Throwing");
                 throw new ArgumentNullException("client");
             }
 
             if (messageTypes == null)
             {
+                Logger.Debug("Message types is null!  Throwing");
                 throw new ArgumentNullException("messageTypes");
             }
 
@@ -106,6 +125,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
             foreach (MessageType mt in messageTypes.Distinct())
             {
                 string messageTypeString = mt.ToString();
+
+                Logger.DebugFormat("Adding message type {0} to {1}.", messageTypeString, clientAddress);
 
                 messageTypeStrings.Add(messageTypeString);
                 subscriptions.Add(
@@ -121,6 +142,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
             {
                 try
                 {
+                    Logger.DebugFormat("Gathering subscriptions for {0} and any of the requested message types.", clientAddress);
                     var existing = dbc.Subscriptions.Where(
                         s => s.SubscriberEndpoint == clientAddress
                              && messageTypeStrings.Contains(s.MessageType));
@@ -129,17 +151,24 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     {
                         if (existing.Any(s => s.MessageType == subscription.MessageType))
                         {
-                            return;
+                            Logger.DebugFormat("{0} already is subscribed to {1}", clientAddress, subscription.MessageType);
+                            continue;
                         }
 
+                        Logger.DebugFormat(
+                            "{0} doesn't yet have {1}.  Subscribing...",
+                            clientAddress,
+                            subscription.MessageType);
                         dbc.Subscriptions.Add(subscription);
                     }
 
+                    Logger.Debug("Saving changes and committing transaction.");
                     dbc.SaveChanges();
                     transaction.Commit();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Logger.Error("Some error happened while saving subscriptions", ex);
                     transaction.Rollback();
                     throw;
                 }
@@ -148,13 +177,17 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         public void Unsubscribe(Address client, IEnumerable<MessageType> messageTypes)
         {
+            Logger.Debug("Unsubscribe called");
+
             if (client == null)
             {
+                Logger.Debug("Client is null!  Throwing");
                 throw new ArgumentNullException("client");
             }
 
             if (messageTypes == null)
             {
+                Logger.Debug("MessageTypes is null!  Throwing");
                 throw new ArgumentNullException("messageTypes");
             }
 
@@ -166,18 +199,22 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
                     string clientAddress = client.ToString();
                     List<string> messageTypeStrings = messageTypes.Select(mt => mt.ToString()).ToList();
 
+                    Logger.DebugFormat("Finding existing subscriptions for message types requested of {0}", clientAddress);
                     List<SubscriptionEntity> existing = dbc.Subscriptions.Where(
                         s => s.SubscriberEndpoint == clientAddress
                              && messageTypeStrings.Contains(s.MessageType))
                         .ToList();
 
+                    Logger.DebugFormat("{0} subscription(s) found, removing them.", existing.Count);
                     dbc.Subscriptions.RemoveRange(existing);
 
+                    Logger.Debug("Saving changes and committing transaction.");
                     dbc.SaveChanges();
                     transaction.Commit();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Logger.Error("Some error happened while removing subscriptions", ex);
                     transaction.Rollback();
                     throw;
                 }

@@ -28,6 +28,7 @@ using System;
 using System.Linq;
 using NServiceBus;
 using NServiceBus.Features;
+using NServiceBus.Logging;
 
 #endregion
 
@@ -35,6 +36,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 {
     public class EntityFrameworkSagaStorageFeature : Feature
     {
+        private static readonly ILog Logger = LogManager.GetLogger<EntityFrameworkSagaStorageFeature>();
+
         public EntityFrameworkSagaStorageFeature()
         {
             DependsOn<Sagas>();
@@ -42,6 +45,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
+            Logger.Debug("Configuring SagaPersister component with InstancePerCall lifecycle.");
             context.Container.ConfigureComponent<SagaPersister>(DependencyLifecycle.InstancePerCall);
         }
     }
