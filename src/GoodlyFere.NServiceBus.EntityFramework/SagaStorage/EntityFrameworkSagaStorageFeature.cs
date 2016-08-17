@@ -45,6 +45,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SagaStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
+            Logger.Debug("Setting up EntityFrameworkSagaStorageFeature");
+
             Logger.Debug("Configuring SagaPersister component with InstancePerCall lifecycle.");
             context.Container.ConfigureComponent<SagaPersister>(DependencyLifecycle.InstancePerCall);
         }

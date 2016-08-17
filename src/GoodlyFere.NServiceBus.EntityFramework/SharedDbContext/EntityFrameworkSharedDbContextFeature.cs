@@ -18,9 +18,11 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
         {
             Logger.Debug("Setting up EntityFrameworkSharedDbContextFeature");
 
+            Logger.Debug("Configuring components: CreateDbContextBehavior, InternalDbContextProvider");
             context.Container.ConfigureComponent<CreateDbContextBehavior>(DependencyLifecycle.InstancePerCall);
             context.Container.ConfigureComponent<InternalDbContextProvider>(DependencyLifecycle.SingleInstance);
 
+            Logger.Debug("Registering CreateDbContextBehavior.Registration with pipeline");
             context.Pipeline.Register<CreateDbContextBehavior.Registration>();
         }
     }

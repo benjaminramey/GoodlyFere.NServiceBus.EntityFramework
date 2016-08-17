@@ -45,6 +45,8 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SubscriptionStorage
 
         protected override void Setup(FeatureConfigurationContext context)
         {
+            Logger.Debug("Setting up EntityFrameworkSubscriptionStorageFeature");
+
             Logger.Debug("Configuring SubscriptionPersister component with InstancePerCall lifecycle.");
             context.Container.ConfigureComponent<SubscriptionPersister>(DependencyLifecycle.InstancePerCall);
         }
