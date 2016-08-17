@@ -122,7 +122,7 @@ namespace GoodlyFere.NServiceBus.EntityFramework.SharedDbContext
                     typeof(CreateDbContextBehavior),
                     "Makes sure that there is a DbContext available on the pipeline")
             {
-                Logger.Debug("Registering CreateDbContext behavior");
+                Logger.Debug("Registering CreateDbContext behavior in RegisterStep");
 
                 InsertAfter(WellKnownStep.ExecuteUnitOfWork);
                 InsertAfterIfExists("OutboxDeduplication");
