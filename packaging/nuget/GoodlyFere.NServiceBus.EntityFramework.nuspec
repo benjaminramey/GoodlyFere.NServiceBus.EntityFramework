@@ -12,7 +12,7 @@
         <projectUrl>https://github.com/benjaminramey/GoodlyFere.NServiceBus.EntityFramework</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>EntityFramework persisters for NServiceBus.</description>
-        <releaseNotes>Fix timeout persister.</releaseNotes>
+        <releaseNotes>Minor bug fixes, add logging.</releaseNotes>
         <copyright>Copyright 2015</copyright>
         <tags>nservicebus entityframework persisters bus servicebus persistence</tags>
         <dependencies>
